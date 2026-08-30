@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collection Privée — Carte des Origines</title>
+<style>
+  :root {
+    --parch:   #FAF5EA;
+    --parch2:  #F0E8D0;
+    --ink:     #1A1108;
+    --smoke:   #7A6A52;
+    --gold:    #C9A55A;
+    --gold-d:  #8B6000;
+    --line:    #D4C090;
+    --ocean:   #D6E4F0;
+    --land:    #F0E8D0;
+    --land-e:  #8B7040;
+
+    --c-scotch: #5B2C6F;
+    --c-france: #1F4E79;
+    --c-japon:  #A93226;
+    --c-canada: #B7472A;
+    --c-rhum:   #1E8449;
+    --c-grappa: #7D3C98;
+    --c-autres: #5D4037;
+
+    --b-pepite: #8B5E00;
+    --b-rare:   #7B2020;
+    --b-bzh-fg: #FFFFFF;
+    --b-bzh-bg: #000000;
+    --b-peat:   #3A1870;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--ink);
+    color: var(--ink);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: var(--parch);
+    box-shadow: 0 0 100px rgba(0,0,0,0.7);
+    position: relative;
+  }
+
+  /* Ornamental borders */
+  .page::before, .page::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg,
+      transparent 0%, var(--gold) 20%, var(--gold) 80%, transparent 100%);
+  }
+  .page::before { top: 12px; }
+  .page::after  { bottom: 12px; }
+
+  /* Header */
+  .hero {
+    text-align: center;
+    padding: 60px 40px 30px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--parch2) 0%, var(--parch) 100%);
+  }
+  .hero-establishment {
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: var(--smoke);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .hero-title {
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .hero-title span { color: var(--gold-d); }
+  .hero-subtitle {
+    font-size: 16px;
+    font-style: italic;
+    color: var(--smoke);
+    margin-bottom: 20px;
+  }
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+  .hero-stat {
+    text-align: center;
+  }
+  .hero-stat-n {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--gold-d);
+    line-height: 1;
+  }
+  .hero-stat-l {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--smoke);
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    justify-content: center;
+    margin: 12px auto;
+    max-width: 400px;
+  }
+  .divider .line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  .divider .gem { color: var(--gold-d); font-size: 12px; }
+
+  /* Sections */
+  .section {
+    padding: 40px;
+    border-bottom: 1px solid var(--line);
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    color: var(--ink);
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .section-sub {
+    text-align: center;
+    font-style: italic;
+    color: var(--smoke);
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+
+  /* Map container */
+  .map-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 900px) {
+    .map-wrap { grid-template-columns: 1fr; }
+  }
+
+  .map-card {
+    background: var(--ocean);
+    border: 1.5px solid var(--gold);
+    padding: 20px;
+    border-radius: 4px;
+  }
+  .map-card h3 {
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--ink);
+    text-align: center;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  svg.geo { width: 100%; height: auto; display: block; }
+  svg.geo .country {
+    fill: var(--land);
+    stroke: var(--land-e);
+    stroke-width: 0.6;
+  }
+  svg.geo .grid {
+    stroke: #C0D0E0;
+    stroke-width: 0.3;
+  }
+  svg.geo .region-label {
+    font-size: 10px;
+    font-weight: bold;
+    fill: #5C4A30;
+    text-anchor: middle;
+    font-family: Georgia, serif;
+  }
+  svg.geo .site {
+    stroke: white;
+    stroke-width: 1.5;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  svg.geo .site:hover { stroke-width: 2.5; }
+  svg.geo .bzh-ring {
+    fill: none;
+    stroke: black;
+    stroke-width: 2;
+    pointer-events: none;
+  }
+  svg.geo .site-label {
+    font-size: 7px;
+    fill: var(--ink);
+    font-family: Georgia, serif;
+    pointer-events: none;
+  }
+  svg.geo .site-label.bzh {
+    font-weight: bold;
+  }
+
+  /* Legend + stats */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+  }
+  @media (max-width: 900px) {
+    .info-grid { grid-template-columns: 1fr; }
+  }
+
+  .stats {
+    background: var(--parch2);
+    border: 1px solid var(--gold);
+    padding: 20px;
+    border-radius: 4px;
+  }
+  .stats h3 {
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--ink);
+    text-align: center;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+  }
+  .stat-bar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    background: #EDE5D0;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+    height: 26px;
+    position: relative;
+  }
+  .stat-bar-fill {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    white-space: nowrap;
+    min-width: fit-content;
+  }
+  .stat-bar-count {
+    margin-left: auto;
+    padding-right: 12px;
+    font-weight: bold;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  .legend {
+    background: var(--parch2);
+    border: 1px solid var(--gold);
+    padding: 20px;
+    border-radius: 4px;
+  }
+  .legend h3 {
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--ink);
+    text-align: center;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  .legend-dot {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+    flex-shrink: 0;
+  }
+  .legend-dot.bzh {
+    background: white;
+    border: 2px solid black;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
+  }
+  .legend-label { font-size: 13px; color: var(--ink); }
+  .legend-count { font-weight: bold; color: var(--gold-d); }
+
+  /* Gwenn ha Du SVG flag */
+  .gwenn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: white;
+    border: 1.5px solid #000;
+    border-radius: 3px;
+    margin-top: 10px;
+  }
+
+  /* Whisky cards */
+  .filter-bar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+  }
+  .filter-btn {
+    padding: 8px 16px;
+    background: var(--parch2);
+    border: 1.5px solid var(--gold);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+  .filter-btn:hover { background: var(--gold); color: white; }
+  .filter-btn.active { background: var(--ink); color: var(--parch); border-color: var(--ink); }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: white;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--gold);
+    padding: 20px;
+    border-radius: 3px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  }
+  .card.pepite { border-left-color: var(--b-pepite); background: #fffcf0; }
+  .card.bzh { border-left-color: black; }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+  .card-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .card-abv {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--gold-d);
+    white-space: nowrap;
+  }
+  .card-dist {
+    font-size: 12px;
+    font-style: italic;
+    color: var(--smoke);
+    margin-bottom: 8px;
+  }
+  .card-meta {
+    font-size: 11px;
+    color: var(--smoke);
+    margin-bottom: 10px;
+  }
+  .card-notes {
+    font-size: 13px;
+    font-style: italic;
+    color: #4A3C28;
+    line-height: 1.55;
+    margin-bottom: 12px;
+    flex: 1;
+  }
+  .card-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    border-radius: 2px;
+  }
+  .badge.b-pepite { background: #FFF5D0; color: var(--b-pepite); }
+  .badge.b-rare   { background: #FFE8E8; color: var(--b-rare); }
+  .badge.b-france { background: #E8F8E8; color: #1A4010; }
+  .badge.b-bzh    { background: #000; color: white; }
+  .badge.b-peat   { background: #EDE8FF; color: var(--b-peat); }
+
+  .card-link {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--gold-d);
+    text-decoration: none;
+    border-top: 1px dotted var(--line);
+    padding-top: 8px;
+    margin-top: auto;
+  }
+  .card-link:hover { color: var(--ink); text-decoration: underline; }
+  .card-link::after { content: " →"; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 30px;
+    font-size: 12px;
+    color: var(--smoke);
+    font-style: italic;
+    background: var(--parch2);
+  }
+  footer strong { color: var(--ink); font-style: normal; }
+
+  /* Tooltip on map dots */
+  .tooltip {
+    position: absolute;
+    background: var(--ink);
+    color: var(--parch);
+    padding: 6px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 100;
+    max-width: 200px;
+  }
+  .tooltip.show { opacity: 0.95; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-establishment">Collection Privée · Mars 2026</div>
+    <h1 class="hero-title">Carte des <span>Origines</span></h1>
+    <p class="hero-subtitle">Voyage à travers 4 continents & 12 régions viticoles</p>
+    <div class="divider">
+      <div class="line"></div>
+      <div class="gem">◆ ◆ ◆</div>
+      <div class="line"></div>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-n">58</div>
+        <div class="hero-stat-l">Expressions</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-n">38</div>
+        <div class="hero-stat-l">Sites</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-n">6</div>
+        <div class="hero-stat-l">Distilleries bretonnes</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-n">4</div>
+        <div class="hero-stat-l">Continents</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP SECTION -->
+  <div class="section">
+    <div class="section-title">Origines géographiques</div>
+    <p class="section-sub">Cliquez sur un point pour découvrir le spiritueux</p>
+
+    <div class="map-wrap">
+      <!-- WORLD MAP -->
+      <div class="map-card">
+        <h3>Vue mondiale</h3>
+        <svg class="geo" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg" id="worldmap">
+          <!-- Ocean background -->
+          <rect width="900" height="480" fill="#D6E4F0"/>
+          <!-- Grid -->
+          <g class="grid" stroke="#C0D0E0" stroke-width="0.3">
+            <line x1="0" y1="120" x2="900" y2="120"/>
+            <line x1="0" y1="240" x2="900" y2="240"/>
+            <line x1="0" y1="360" x2="900" y2="360"/>
+            <line x1="150" y1="0" x2="150" y2="480"/>
+            <line x1="300" y1="0" x2="300" y2="480"/>
+            <line x1="450" y1="0" x2="450" y2="480"/>
+            <line x1="600" y1="0" x2="600" y2="480"/>
+            <line x1="750" y1="0" x2="750" y2="480"/>
+          </g>
+
+          <!-- Countries (simplified) -->
+          <!-- projection: lon -> x = (lon+130)*3.15, lat -> y = (72-lat)*7.5 -->
+          <!-- North America -->
+          <path class="country" d="M 15 90 L 15 240 L 55 300 L 70 320 L 100 320 L 130 285 L 170 250 L 195 230 L 220 220 L 250 220 L 260 240 L 270 260 L 285 260 L 290 250 L 300 245 L 320 240 L 335 245 L 345 260 L 340 275 L 320 285 L 300 290 L 280 285 L 260 290 L 240 300 L 220 305 L 200 300 L 190 285 L 165 260 L 120 270 L 90 260 L 60 230 L 40 200 L 20 160 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <!-- Europe -->
+          <path class="country" d="M 440 155 L 445 145 L 445 130 L 460 130 L 470 145 L 485 145 L 490 155 L 500 170 L 495 180 L 480 190 L 475 195 L 470 210 L 470 220 L 450 225 L 445 215 L 445 195 L 435 185 L 435 175 L 440 155 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <!-- UK/Ireland -->
+          <path class="country" d="M 435 140 L 442 130 L 445 115 L 442 105 L 432 100 L 425 108 L 425 122 L 430 138 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <path class="country" d="M 415 140 L 422 135 L 425 125 L 420 118 L 412 122 L 412 138 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <!-- Iberia -->
+          <path class="country" d="M 425 210 L 445 205 L 460 210 L 460 235 L 445 245 L 425 240 L 415 225 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <!-- Italy -->
+          <path class="country" d="M 480 195 L 495 205 L 505 235 L 515 250 L 510 265 L 500 260 L 490 235 L 485 215 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <!-- Scandinavia -->
+          <path class="country" d="M 455 55 L 475 55 L 490 90 L 500 105 L 495 125 L 480 130 L 465 120 L 460 90 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <!-- N Africa -->
+          <path class="country" d="M 400 260 L 470 265 L 540 260 L 555 300 L 540 330 L 470 335 L 415 320 L 395 290 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <!-- Russia -->
+          <path class="country" d="M 500 100 L 570 90 L 640 90 L 720 100 L 790 115 L 830 130 L 830 165 L 800 175 L 750 175 L 690 165 L 620 155 L 555 145 L 510 130 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <!-- Japan -->
+          <path class="country" d="M 845 200 L 855 210 L 862 240 L 855 260 L 848 265 L 843 250 L 838 230 L 840 210 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <path class="country" d="M 852 190 L 863 190 L 868 200 L 860 205 L 850 200 Z" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.6"/>
+          <!-- Martinique tiny -->
+          <circle cx="220" cy="358" r="2" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.5"/>
+
+          <!-- Region labels -->
+          <text class="region-label" x="130" y="195">CANADA</text>
+          <text class="region-label" x="130" y="280">USA</text>
+          <text class="region-label" x="425" y="115">ÉCOSSE</text>
+          <text class="region-label" x="460" y="175">FRANCE</text>
+          <text class="region-label" x="500" y="220">ITALIE</text>
+          <text class="region-label" x="425" y="225">ESPAGNE</text>
+          <text class="region-label" x="850" y="185">JAPON</text>
+          <text class="region-label" x="680" y="130">RUSSIE</text>
+          <text class="region-label" x="220" y="378" style="font-size:8px">MARTINIQUE</text>
+
+          <!-- Sites plotted programmatically below -->
+          <g id="worldsites"></g>
+        </svg>
+      </div>
+
+      <!-- EUROPE ZOOM -->
+      <div class="map-card">
+        <h3>Cœur de la collection — Europe</h3>
+        <svg class="geo" viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg" id="eumap">
+          <rect width="900" height="620" fill="#D6E4F0"/>
+          <!-- projection: lon [-11..13] -> x [0..900] ; lat [40..61] -> y [620..0]
+               scale x: 37.5 per degree, y: 29.5 per degree -->
+          <g class="grid" stroke="#C0D0E0" stroke-width="0.3">
+            <line x1="0" y1="150" x2="900" y2="150"/>
+            <line x1="0" y1="300" x2="900" y2="300"/>
+            <line x1="0" y1="450" x2="900" y2="450"/>
+            <line x1="225" y1="0" x2="225" y2="620"/>
+            <line x1="450" y1="0" x2="450" y2="620"/>
+            <line x1="675" y1="0" x2="675" y2="620"/>
+          </g>
+
+          <!-- France mainland: transform lon,lat -->
+          <!-- (lon+11)*37.5, (61-lat)*29.5 -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 360 519 L 345 522 L 341 498 L 371 456 L 375 445 L 349 431 L 337 417 L 322 402 L 300 393 L 251 386 L 236 373 L 244 361 L 259 361 L 296 364 L 337 370 L 371 361 L 425 355 L 431 347 L 452 355 L 476 355 L 501 361 L 524 361 L 566 355 L 546 385 L 546 402 L 566 402 L 599 416 L 578 411 L 566 431 L 574 449 L 599 467 L 566 470 L 546 481 L 502 481 L 484 502 L 502 520 L 502 528 L 502 543 L 480 543 L 464 519 L 435 522 L 414 519 L 401 519 L 380 519 Z"/>
+
+          <!-- Corsica -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 735 578 L 764 578 L 767 564 L 761 540 L 748 528 L 745 546 L 735 560 Z"/>
+
+          <!-- Scotland -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 225 190 L 232 180 L 244 175 L 260 175 L 274 195 L 279 220 L 289 240 L 289 260 L 274 270 L 265 260 L 244 250 L 225 240 L 213 220 L 208 205 Z"/>
+
+          <!-- England+Wales -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 225 340 L 240 330 L 245 285 L 270 275 L 292 275 L 306 285 L 323 305 L 340 315 L 350 335 L 340 350 L 325 360 L 300 360 L 275 355 L 250 350 Z"/>
+
+          <!-- Ireland -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 100 260 L 138 265 L 168 275 L 178 305 L 168 335 L 138 340 L 100 335 L 90 305 Z"/>
+
+          <!-- Italy -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 610 486 L 630 470 L 640 445 L 660 430 L 700 425 L 725 435 L 743 445 L 735 470 L 720 490 L 700 520 L 680 545 L 660 550 L 645 555 L 638 570 L 645 585 L 638 590 L 620 570 L 605 540 L 600 510 Z"/>
+
+          <!-- Sardinia -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 725 620 L 748 620 L 748 600 L 725 600 Z"/>
+
+          <!-- Iberia -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 60 620 L 130 618 L 180 620 L 200 618 L 240 620 L 315 620 L 385 585 L 400 550 L 405 520 L 360 500 L 315 495 L 255 500 L 190 510 L 130 530 L 80 560 L 55 590 Z"/>
+
+          <!-- Germany simplified -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 592 330 L 610 340 L 640 340 L 660 355 L 680 380 L 685 415 L 660 425 L 640 425 L 620 415 L 592 405 L 585 380 L 583 355 Z"/>
+
+          <!-- CH/AT simplified -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 555 425 L 600 425 L 640 430 L 660 430 L 660 445 L 640 450 L 610 448 L 570 445 Z"/>
+
+          <!-- Belgium/NL -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 490 350 L 530 350 L 555 360 L 575 355 L 583 355 L 583 380 L 570 400 L 540 395 L 510 385 L 490 375 Z"/>
+
+          <!-- Scandinavia hint -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 545 0 L 640 15 L 730 60 L 745 100 L 720 150 L 660 130 L 580 90 L 545 40 Z"/>
+
+          <!-- N Africa hint at bottom -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.7"
+            d="M 60 620 L 300 620 L 600 620 L 900 620 L 900 610 L 620 605 L 300 610 L 60 615 Z"/>
+
+          <!-- Islay -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.5"
+            d="M 168 155 L 195 158 L 195 145 L 168 148 Z"/>
+          <!-- Skye -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.5"
+            d="M 155 108 L 195 105 L 200 125 L 158 128 Z"/>
+          <!-- Orkney -->
+          <path class="country" fill="#F0E8D0" stroke="#8B7040" stroke-width="0.5"
+            d="M 285 60 L 315 60 L 315 80 L 285 80 Z"/>
+
+          <!-- BREIZH highlighting -->
+          <path fill="#FFFFFF" stroke="#000000" stroke-width="1.3" fill-opacity="0.35"
+            d="M 220 405 L 218 370 L 240 358 L 285 355 L 335 360 L 355 380 L 335 400 L 285 402 L 240 405 Z"/>
+          <text x="270" y="382" text-anchor="middle" font-size="12" font-weight="bold"
+                fill="#000000" font-family="Georgia,serif">BREIZH</text>
+
+          <!-- Region labels -->
+          <text class="region-label" x="250" y="215" style="font-size:13px">ÉCOSSE</text>
+          <text class="region-label" x="300" y="330" style="font-size:11px">ANGL.</text>
+          <text class="region-label" x="130" y="300" style="font-size:11px">IRL.</text>
+          <text class="region-label" x="460" y="450" style="font-size:13px">FRANCE</text>
+          <text class="region-label" x="680" y="500" style="font-size:12px">ITALIE</text>
+          <text class="region-label" x="200" y="590" style="font-size:12px">ESPAGNE</text>
+          <text class="region-label" x="635" y="380" style="font-size:11px">ALLEM.</text>
+
+          <!-- Sites plotted programmatically -->
+          <g id="eusites"></g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Legend + Stats -->
+    <div class="info-grid">
+      <div class="legend">
+        <h3>Légende</h3>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: var(--c-scotch)"></span>
+          <span class="legend-label">Whisky écossais</span>
+          <span class="legend-count" id="count-scotch">—</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: var(--c-france)"></span>
+          <span class="legend-label">Whisky français</span>
+          <span class="legend-count" id="count-france">—</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: var(--c-rhum)"></span>
+          <span class="legend-label">Rhum / Martinique</span>
+          <span class="legend-count" id="count-rhum">—</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: var(--c-grappa)"></span>
+          <span class="legend-label">Grappa (Italie)</span>
+          <span class="legend-count" id="count-grappa">—</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: var(--c-japon)"></span>
+          <span class="legend-label">Whisky japonais</span>
+          <span class="legend-count" id="count-japon">—</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: var(--c-canada)"></span>
+          <span class="legend-label">Whisky canadien</span>
+          <span class="legend-count" id="count-canada">—</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: var(--c-autres)"></span>
+          <span class="legend-label">Autres spiritueux</span>
+          <span class="legend-count" id="count-autres">—</span>
+        </div>
+        <div class="legend-item" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line)">
+          <span class="legend-dot bzh"></span>
+          <span class="legend-label"><strong>Distillerie bretonne</strong> (cercle noir sur la carte)</span>
+        </div>
+        <!-- Gwenn ha Du mini flag -->
+        <div class="gwenn-badge">
+          <svg width="40" height="27" viewBox="0 0 40 27">
+            <!-- White background -->
+            <rect x="0" y="0" width="40" height="27" fill="white" stroke="black" stroke-width="0.5"/>
+            <!-- 9 horizontal bands (5 black + 4 white) on right 2/3 -->
+            <rect x="14" y="0"  width="26" height="3" fill="black"/>
+            <rect x="14" y="6"  width="26" height="3" fill="black"/>
+            <rect x="14" y="12" width="26" height="3" fill="black"/>
+            <rect x="14" y="18" width="26" height="3" fill="black"/>
+            <rect x="14" y="24" width="26" height="3" fill="black"/>
+            <!-- Ermine canton -->
+            <rect x="0" y="0" width="14" height="14" fill="white" stroke="black" stroke-width="0.4"/>
+            <circle cx="4" cy="4" r="0.8" fill="black"/>
+            <circle cx="10" cy="4" r="0.8" fill="black"/>
+            <circle cx="4" cy="10" r="0.8" fill="black"/>
+            <circle cx="10" cy="10" r="0.8" fill="black"/>
+            <circle cx="7" cy="7" r="0.8" fill="black"/>
+          </svg>
+          <span style="font-weight: bold; font-size: 12px">Gwenn ha Du · Bretagne</span>
+        </div>
+      </div>
+
+      <div class="stats">
+        <h3>Répartition</h3>
+        <div id="stat-bars"></div>
+        <p style="text-align: center; font-size: 11px; font-style: italic; color: var(--smoke); margin-top: 12px">
+          ● Taille du marqueur ∝ nombre de bouteilles
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHISKY CARDS SECTION -->
+  <div class="section">
+    <div class="section-title">Fiches descriptives</div>
+    <p class="section-sub">Filtrez par origine — cliquez sur une fiche pour la fiche producteur</p>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">Tous</button>
+      <button class="filter-btn" data-filter="scotch">Écosse</button>
+      <button class="filter-btn" data-filter="france">France</button>
+      <button class="filter-btn" data-filter="bzh">Bretagne</button>
+      <button class="filter-btn" data-filter="japon">Japon</button>
+      <button class="filter-btn" data-filter="canada">Canada</button>
+      <button class="filter-btn" data-filter="rhum">Rhum</button>
+      <button class="filter-btn" data-filter="grappa">Grappa</button>
+      <button class="filter-btn" data-filter="autres">Autres</button>
+      <button class="filter-btn" data-filter="pepite">★ Pépites</button>
+    </div>
+
+    <div class="cards-grid" id="cardgrid"></div>
+  </div>
+
+  <footer>
+    <p><strong>Collection Privée</strong> — 58 expressions · 38 sites de production sur 4 continents</p>
+    <p style="margin-top: 8px">« Le whisky, c'est la lumière du soleil maintenue en suspension dans l'eau. »</p>
+    <p style="margin-top: 12px; font-size: 10px; letter-spacing: 2px">MARS 2026</p>
+  </footer>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────
+// DATA - Collection complète, 57 expressions, 38 sites
+// ─────────────────────────────────────────────────────────────────────────
+const SITES = [
+  // ── ISLAY ──
+  { id:"ardbeg", name:"Ardbeg", region:"Islay", lon:-6.110, lat:55.640, type:"scotch", count:7, bzh:false,
+    expressions:[
+      { n:"Ardbeg Ten",              age:"10 ans", abv:"46%",   notes:"Sea spray, rope goudronné, fumée équilibrée — l'entrée en matière parfaite", badges:["peat"], link:"https://www.ardbeg.com/en/ardbeg-ten-years-old" },
+      { n:"Ardbeg An Oa",            age:"NAS",    abv:"46,6%", notes:"Fumeux, doux, arrondi — Round Table cask (Virgin Oak, PX, Oloroso)",       badges:["peat"], link:"https://www.ardbeg.com/en/ardbeg-an-oa" },
+      { n:"Ardbeg Ardcore",          age:"NAS",    abv:"46%",   notes:"Café, chocolat brûlé, orge noire torréfiée — dimension inattendue",         badges:["rare","peat"], link:"https://www.ardbeg.com/en/ardbeg-ardcore" },
+      { n:"Ardbeg Hypernova",        age:"NAS",    abv:"~46%",  notes:"Rope goudronné, sea spray astral — Committee Release 2023",                 badges:["rare","peat"], link:"https://www.ardbeg.com/en/ardbeg-hypernova" },
+      { n:"Ardbeg 8 Discussion",     age:"8 ans",  abv:"50,8%", notes:"Agrumes vifs, biscuit, fumée verte — brut de fût, Committee",              badges:["pepite","rare","peat"], link:"https://www.ardbeg.com/" },
+      { n:"Ardbeg Scorch",           age:"NAS",    abv:"~46%",  notes:"Cuir fumé, caramel craquelé, chêne brûlé — édition Ardbeg Day 2021",       badges:["rare","peat"], link:"https://www.ardbeg.com/" },
+      { n:"Ardbeg Smoketrails Côte Rôtie", age:"NAS", abv:"~50,4%", notes:"Finition fûts de Côte Rôtie — fumée profonde, fruits rouges, épices Rhône", badges:["rare","peat"], link:"https://www.ardbeg.com/" },
+    ] },
+  { id:"traigh-bhan", name:"Ardbeg Traigh Bhan", region:"Islay", lon:-6.110, lat:55.640, type:"scotch", count:1, bzh:false, sameSiteAs:"ardbeg",
+    expressions:[
+      { n:"Ardbeg Traigh Bhan 19 Ans", age:"19 ans", abv:"46,2%", notes:"Citron, anis, noix — Oloroso & chêne américain, Small Batch TB/03, NCF", badges:["pepite","rare","peat"], link:"https://www.ardbeg.com/en/ardbeg-traigh-bhan" },
+    ] },
+  { id:"bruichladdich", name:"Bruichladdich", region:"Islay", lon:-6.359, lat:55.770, type:"scotch", count:1, bzh:false,
+    expressions:[
+      { n:"Octomore 10.3", age:"~5 ans", abv:"61,3%", notes:"258 PPM — tourbe volcanique, malt doux dessous, brut de fût", badges:["pepite","rare","peat"], link:"https://www.bruichladdich.com/en/octomore" },
+    ] },
+  { id:"caolila", name:"Caol Ila", region:"Islay", lon:-6.111, lat:55.857, type:"scotch", count:1, bzh:false,
+    expressions:[
+      { n:"Caol Ila 8 Ans — Coll. 7.4", age:"8 ans", abv:"43%", notes:"Signatory / LMV — Légèreté fumée, agrumes, marin · 2 753 bouteilles, distillé 2015", badges:["rare","peat"], link:"https://www.malts.com/en-row/our-whisky-collection/caol-ila/" },
+    ] },
+  { id:"bunnahabhain", name:"Bunnahabhain", region:"Islay", lon:-6.135, lat:55.879, type:"scotch", count:2, bzh:false,
+    expressions:[
+      { n:"Bunnahabhain Staoisha 9 — Coll. 7.5", age:"9 ans", abv:"46%", notes:"Signatory / LMV — Heavily peated, fruits noirs, épices · 1 687 bouteilles, distillé 2014", badges:["rare","peat"], link:"https://bunnahabhain.com/" },
+      { n:"Bunnahabhain Stiùireadair",           age:"NAS",   abv:"46,3%", notes:"Sherry opulent, fruits secs, noix, salinité — Islay sans tourbe", badges:["pepite"], link:"https://bunnahabhain.com/whisky/stiuireadair/" },
+    ] },
+  { id:"lagavulin", name:"Lagavulin", region:"Islay", lon:-6.127, lat:55.633, type:"scotch", count:1, bzh:false,
+    expressions:[
+      { n:"Lagavulin 16 Ans", age:"16 ans", abv:"43%", notes:"Fumée profonde, réglisse, herbes maritimes — l'icône d'Islay (Distillerie 1816)", badges:["pepite","peat"], link:"https://www.malts.com/en-row/our-whisky-collection/lagavulin/lagavulin-16-year-old" },
+    ] },
+  // ── HIGHLANDS & SPEYSIDE ──
+  { id:"glengoyne", name:"Glengoyne", region:"Highlands", lon:-4.350, lat:56.030, type:"scotch", count:1, bzh:false,
+    expressions:[
+      { n:"Glengoyne 18 Ans", age:"18 ans", abv:"43%", notes:"Pomme dorée, vanille, sherry — distillation la plus lente d'Écosse (1833), NCF", badges:["pepite"], link:"https://glengoyne.com/whisky/18-year-old/" },
+    ] },
+  { id:"dalmore", name:"The Dalmore", region:"Highlands", lon:-4.276, lat:57.690, type:"scotch", count:1, bzh:false,
+    expressions:[
+      { n:"The Dalmore 12 Ans", age:"12 ans", abv:"40%", notes:"Orange confite, chocolat, noix de coco — Bourbon + Oloroso Sherry", badges:[], link:"https://www.thedalmore.com/en-gb/our-whiskies/dalmore-12/" },
+    ] },
+  { id:"edradour", name:"Edradour", region:"Highlands", lon:-3.700, lat:56.700, type:"scotch", count:1, bzh:false,
+    expressions:[
+      { n:"Ballechin 10 Ans", age:"10 ans", abv:"46,2%", notes:"Sherry fruité + tourbe douce des Highlands, NCF, 50+ PPM — Edradour/Pitlochry", badges:["peat"], link:"https://edradour.com/ballechin/" },
+    ] },
+  { id:"macallan", name:"The Macallan", region:"Speyside", lon:-3.220, lat:57.490, type:"scotch", count:1, bzh:false,
+    expressions:[
+      { n:"The Macallan Amber", age:"NAS", abv:"40%", notes:"Vanille, caramel, épices douces — Sherry Oak exclusivement", badges:[], link:"https://www.themacallan.com/" },
+    ] },
+  { id:"glenfiddich", name:"Glenfiddich", region:"Speyside", lon:-3.122, lat:57.450, type:"scotch", count:1, bzh:false,
+    expressions:[
+      { n:"Glenfiddich MME Batch 06/13", age:"NAS", abv:"43%", notes:"Fruits secs, sherry épicé — double maturation chêne + sherry, sélection du Malt Master", badges:["rare"], link:"https://www.glenfiddich.com/" },
+    ] },
+  // ── ÎLES & BLENDED ──
+  { id:"talisker", name:"Talisker", region:"Skye", lon:-6.355, lat:57.302, type:"scotch", count:1, bzh:false,
+    expressions:[
+      { n:"Talisker Skye", age:"NAS", abv:"45,8%", notes:"Chaleur maritime, poivre noir éclatant, tourbe douce de Skye (1830)", badges:["peat"], link:"https://www.malts.com/en-row/our-whisky-collection/talisker/talisker-skye" },
+    ] },
+  { id:"scapa", name:"Scapa", region:"Orcades", lon:-2.960, lat:58.950, type:"scotch", count:2, bzh:false,
+    expressions:[
+      { n:"Scapa Skiren", age:"NAS", abv:"40%", notes:"Pomme, pêche, herbes du vent — doux et floral, NCF, orcadien", badges:[], link:"https://www.scapawhisky.com/" },
+      { n:"Scapa Glansa", age:"NAS", abv:"40%", notes:"Finition fûts de tourbe, poire mûre, beurre salé, miel", badges:["peat"], link:"https://www.scapawhisky.com/" },
+    ] },
+  { id:"wemyss", name:"Wemyss / Compass Box", region:"Edinburgh", lon:-3.190, lat:55.953, type:"scotch", count:3, bzh:false,
+    expressions:[
+      { n:"Compass Box Peat Monster", age:"NAS", abv:"46%", notes:"Tourbe envahissante, puis fruits rouges inattendus — John Glaser", badges:["pepite","peat"], link:"https://www.compassboxwhisky.com/the-peat-monster/" },
+      { n:"Wemyss Smoky Shores", age:"NAS", abv:"~46%", notes:"Menthe, romarin, anis, fumée robuste, citron zesté — Limited Edition", badges:["rare","peat"], link:"https://www.wemyssmalts.com/" },
+      { n:"Wemyss Peat Chimney", age:"NAS", abv:"46%", notes:"Fumée chaude, toffee, fruits à coques, épices — Small Batch", badges:["peat"], link:"https://www.wemyssmalts.com/collections/wemyss-malts/products/peat-chimney" },
+    ] },
+  // ── JAPON ──
+  { id:"nikka", name:"Nikka", region:"Yoichi+Miyagikyo", lon:140.793, lat:43.187, type:"japon", count:1, bzh:false,
+    expressions:[
+      { n:"Nikka Taketsuru 竹鶴", age:"NAS", abv:"43%", notes:"Fumée légère + fluidité florale — assemblage Yoichi & Miyagikyo, hommage au fondateur", badges:["pepite"], link:"https://www.nikka.com/eng/brands/taketsuru/" },
+    ] },
+  { id:"togouchi", name:"Chugoku Jozo (Togouchi)", region:"Hiroshima", lon:132.460, lat:34.385, type:"japon", count:2, bzh:false,
+    expressions:[
+      { n:"Togouchi Beer Cask Finish", age:"NAS", abv:"40%", notes:"Affiné fût de bière — houblon frais, céréales maltées, biscuit", badges:[], link:"https://www.chugoku-jozo.co.jp/togouchi/" },
+      { n:"Togouchi Premium",          age:"NAS", abv:"40%", notes:"Miel, bois poli, agrumes doux — douceur nippone accessible", badges:[], link:"https://www.chugoku-jozo.co.jp/togouchi/" },
+    ] },
+  // ── FRANCE ── Bretagne (BZH)
+  { id:"menhirs", name:"Distillerie des Menhirs", region:"Plomelin (29)", lon:-4.150, lat:47.957, type:"france", count:4, bzh:true,
+    expressions:[
+      { n:"Eddu 10 Ans",                       age:"10 ans", abv:"43%",  notes:"Pur blé noir vieilli 10 ans en chêne français du Limousin — fleurs séchées, fruits confits, épices, notes boisées. Anciennement Eddu Gold, médaille d'or WWA 2025 (Single Grain)", badges:["pepite","france","bzh"], link:"https://www.distillerie.bzh/produit/eddu-10-ans/" },
+      { n:"Eddu Sélection Famille Le Lay #2", age:"~8 ans", abv:"~46%", notes:"Blé noir 84% + orge malté tourbé 16%, vieilli 8 ans en chêne Limousin — la tourbe subtile émerge délicatement du blé noir (embouteillé fin 2025)", badges:["pepite","rare","france","bzh","peat"], link:"https://www.distillerie.bzh/produit/eddu-selection-famille-le-lay-2/" },
+      { n:"Lambig Hors d'Âge",                 age:"H.d'Âge", abv:"~45%", notes:"Pomme caramélisée, épices, bois noble — référence bretonne AOC Lambig",                                                                    badges:["pepite","france","bzh"],                link:"https://www.distillerie.bzh/produit/lambig-de-bretagne-hors-dage/" },
+    ] },
+  { id:"warenghem", name:"Distillerie Warenghem", region:"Lannion (22)", lon:-3.460, lat:48.732, type:"france", count:2, bzh:true,
+    expressions:[
+      { n:"Armorik Yeun Elez Jobic",       age:"NAS", abv:"46%",  notes:"Single Malt tourbé breton (malt écossais 50 PPM) — Meilleur Single Malt Français 2025 (WWA). Camphre, banane, pêche cuite, tourbe médicinale élégante", badges:["pepite","rare","france","bzh","peat"], link:"https://armorik.bzh/notre-whisky-single-malt-tourbe-yeun-elez/" },
+      { n:"Fine Bretagne Étoile",          age:"NAS", abv:"~40%", notes:"Pomme au four, puissant — alambic centenaire, AOC Fine Bretagne, vieilli chêne Limousin", badges:["france","bzh"], link:"https://www.distillerie-warenghem.com/" },
+    ] },
+  { id:"naguelann", name:"Naguelann", region:"Languenan (22)", lon:-2.099, lat:48.516, type:"france", count:1, bzh:true,
+    expressions:[
+      { n:"Naguelann DEK! 10 Ans", age:"10 ans", abv:"49%", notes:"Édition 10 ans, illustration BD (Festival Quai des Bulles) · Single Malt breton, alambics à flammes nues, NCF, eau de Plancoët — « Dour, Koad, Gedal »", badges:["pepite","rare","france","bzh"], link:"https://www.naguelann.bzh/" },
+    ] },
+  { id:"ponant", name:"Distillerie du Ponant", region:"Belle-Île (56)", lon:-3.198, lat:47.347, type:"france", count:1, bzh:true,
+    expressions:[
+      { n:"Le Jaune 2024", age:"Mill. 2024", abv:"51%", notes:"Anis, fenouil sauvage, herbes bretonnes — type pastis artisanal 51°, produit à Belle-Île-en-Mer", badges:["rare","france","bzh"], link:"https://www.la-distillerie-du-ponant.fr/" },
+    ] },
+  // ── FRANCE ── autres régions
+  { id:"piautre", name:"La Piautre", region:"La Ménitré (49)", lon:-0.272, lat:47.408, type:"france", count:1, bzh:false,
+    expressions:[
+      { n:"La Piautre D'Eire et d'Alba", age:"NAS", abv:"54,5%", notes:"Loire ↔ Écosse · Tourbe maritime, iodée, orge BIO, feu de bois, brut de fût, fûts Hébrides", badges:["pepite","rare","france","peat"], link:"https://lapiautre.fr/" },
+    ] },
+  { id:"vercors", name:"Distillerie du Vercors", region:"St-Jean-en-Royans (26)", lon:5.293, lat:45.005, type:"france", count:2, bzh:false,
+    expressions:[
+      { n:"Séquoia Pur Malt Tourbé Bio N°3", age:"NAS", abv:"46,1%", notes:"487 bouteilles · 14h distil · 35 PPM · herbes alpines BIO, NCF, distillé sous un séquoia centenaire", badges:["pepite","rare","france","peat"], link:"https://distillerie-vercors.com/" },
+      { n:"Séquoia Single Malt 10.23",       age:"NAS", abv:"~42%",  notes:"Fleurs, miel de montagne, céréales BIO — distillation douce basse température",                                                                          badges:["france"],                            link:"https://distillerie-vercors.com/" },
+    ] },
+  { id:"mavela", name:"Mavela / Pietra", region:"Aleria (Corse)", lon:9.510, lat:42.116, type:"france", count:1, bzh:false,
+    expressions:[
+      { n:"P&M Corse Vintage", age:"NAS", abv:"~42%", notes:"Maquis corse, myrte, lentisque, granit · N°024775, Small Batch, NCF", badges:["rare","france"], link:"https://www.brasseriepietra.com/" },
+    ] },
+  { id:"ninkasi", name:"Ninkasi", region:"Lyon", lon:4.835, lat:45.764, type:"france", count:1, bzh:false,
+    expressions:[
+      { n:"Ninkasi Fût de Chardonnay", age:"NAS", abv:"40%", notes:"Douceur fruitée, floral, boisé délicat — esprit lyonnais, single malt brassé et distillé chez Ninkasi", badges:["france"], link:"https://www.ninkasi.fr/" },
+    ] },
+  { id:"rozelieures", name:"Rozelieures", region:"Lorraine (54)", lon:6.466, lat:48.480, type:"france", count:1, bzh:false,
+    expressions:[
+      { n:"Lothaire Tourbé Fumé", age:"NAS", abv:"~43%", notes:"Fumée de chêne, céréales de Lorraine, rondeur française", badges:["france","peat"], link:"https://www.whiskyrozelieures.com/" },
+    ] },
+  { id:"mauler", name:"Distillerie Mauler", region:"Normandie", lon:0.370, lat:49.180, type:"france", count:1, bzh:false,
+    expressions:[
+      { n:"Cormeil Normandie", age:"NAS", abv:"~43%", notes:"Pomme normande, tourbe douce, épices d'automne — Peated Single Malt de Normandie", badges:["france","peat"], link:"#" },
+    ] },
+  { id:"clos-groie", name:"Le Clos de la Groie", region:"Charentes", lon:-0.230, lat:45.640, type:"france", count:1, bzh:false,
+    expressions:[
+      { n:"Le Clos de la Groie — Sublime Cognac", age:"NAS", abv:"~40%", notes:"Fruits confits, chêne, floral, rancio — Cognac artisanal charentais", badges:["france"], link:"#" },
+    ] },
+  { id:"montbord", name:"Mamie Montbord", region:"Faye-sur-Ardin", lon:-0.400, lat:46.480, type:"france", count:1, bzh:false,
+    expressions:[
+      { n:"E. de Vie Prunes·Poires·Pêches 1959", age:"Mill. 1959", abv:"~50%", notes:"De Mamie Montbord (Faye-sur-Ardin) · Prunes, poires, pêches — pièce extrêmement rare, +65 ans de garde", badges:["pepite","rare"], link:"#" },
+    ] },
+  { id:"fourre", name:"Famille Fourré", region:"France", lon:1.500, lat:47.000, type:"france", count:1, bzh:false,
+    expressions:[
+      { n:"Eau de Vie Poire Williams 1975", age:"Mill. 1975", abv:"~45%", notes:"Bouteille verte ancienne, étiquette « 1975 Fourré » — poire florale, cristalline (50 ans de garde)", badges:["pepite","rare"], link:"#" },
+    ] },
+  // ── CANADA ──
+  { id:"sortilege", name:"Sortilège", region:"Québec", lon:-73.567, lat:45.502, type:"canada", count:1, bzh:false,
+    expressions:[
+      { n:"Sortilège Prestige", age:"~7 ans", abv:"40%", notes:"Érable caramélisé, vanille, bois doux — classique québécois, sirop d'érable pur", badges:["pepite"], link:"https://sortilege.ca/" },
+    ] },
+  { id:"pikecreek", name:"Pike Creek", region:"Ontario", lon:-82.665, lat:42.273, type:"canada", count:1, bzh:false,
+    expressions:[
+      { n:"Pike Creek 10 Ans Rum Barrel", age:"10 ans", abv:"42%", notes:"Finition fûts de rhum — vanille, caramel, noix de coco (Double Oak)", badges:[], link:"https://www.pikecreekwhisky.ca/" },
+    ] },
+  // ── RHUMS ──
+  { id:"rhumjm", name:"Rhum J.M", region:"Martinique", lon:-61.165, lat:14.838, type:"rhum", count:2, bzh:false,
+    expressions:[
+      { n:"Rhum J.M Réserve Famille",  age:"Grand vieill.", abv:"~45%", notes:"Banane, épices, bois complexe — grand vieillissement AOC Martinique",         badges:["pepite","rare"], link:"https://www.rhum-jm.com/" },
+      { n:"Rhum J.M La Sélection",     age:"NAS",           abv:"~45%", notes:"Canne fraîche, fruits tropicaux, élégance AOC Martinique",                    badges:["rare"],          link:"https://www.rhum-jm.com/" },
+    ] },
+  { id:"troisrivieres", name:"Trois Rivières", region:"Martinique", lon:-60.910, lat:14.470, type:"rhum", count:1, bzh:false,
+    expressions:[
+      { n:"Trois Rivières Triple Millésime", age:"2006·14·16", abv:"42%", notes:"3 millésimes : agrumes, mangue, épices — AOC Martinique, par Daniel Baudin", badges:["pepite","rare"], link:"https://www.plantationtroisrivieres.com/" },
+    ] },
+  { id:"conciergerie", name:"La Conciergerie", region:"Haute-Marne (52)", lon:5.140, lat:48.110, type:"rhum", count:1, bzh:false,
+    expressions:[
+      { n:"Rhum Arrangé Le Fléau", age:"NAS", abv:"~40%", notes:"Fruits macérés, épices — arrangé artisanal Haute-Marne", badges:[], link:"#" },
+    ] },
+  // ── GRAPPA ──
+  { id:"canonica", name:"Canonica Cav. Cesare", region:"Piémont — Langhe", lon:8.080, lat:44.520, type:"grappa", count:3, bzh:false,
+    expressions:[
+      { n:"Grappa Nebbiolo Blanche",  age:"Vend. ~1960", abv:"45%", notes:"Floral, raisin frais, minéral — Vinacce Nebbiolo Langhe",           badges:[], link:"#" },
+      { n:"Grappa Nebbiolo Affinée",  age:"Vend. ~1960", abv:"45%", notes:"Vanille, abricot sec, bois — affinée en fût, Nebbiolo Langhe",     badges:[], link:"#" },
+      { n:"Grappa Dolcetto",          age:"Vend. ~1960", abv:"43%", notes:"Amande, cerise, floral doux — Vinacce Dolcetto Langhe",             badges:[], link:"#" },
+    ] },
+  { id:"castelli", name:"Castelli Giuseppe", region:"Barolo", lon:7.940, lat:44.620, type:"grappa", count:1, bzh:false,
+    expressions:[
+      { n:"Branda Barolo 1999 — 55°", age:"Mill. 1999", abv:"55%", notes:"Barolo intense, fruits noirs, puissance rare — pièce unique, artisanale", badges:["pepite","rare"], link:"#" },
+    ] },
+  // ── AUTRES ──
+  { id:"ibiza", name:"Hierbas Ibicencas", region:"Ibiza", lon:1.430, lat:38.910, type:"autres", count:1, bzh:false,
+    expressions:[
+      { n:"Hierbas Ibicencas 100 Ans", age:"Éd. 2025", abv:"~35%", notes:"Herbes méditerranéennes, anis, thym — édition centenaire 1925–2025", badges:["rare"], link:"#" },
+    ] },
+  { id:"putinka", name:"Putinka", region:"Moscou", lon:37.620, lat:55.756, type:"autres", count:1, bzh:false,
+    expressions:[
+      { n:"Putinka Vodka", age:"—", abv:"40%", notes:"Vodka classique, neutre et propre · petite bouteille collector", badges:[], link:"#" },
+    ] },
+];
+
+const TYPE_COLORS = {
+  scotch: "#5B2C6F", france: "#1F4E79", japon: "#A93226",
+  canada: "#B7472A", rhum: "#1E8449", grappa: "#7D3C98", autres: "#5D4037",
+};
+const TYPE_LABELS = {
+  scotch: "Whisky écossais", france: "France", japon: "Japon",
+  canada: "Canada", rhum: "Rhum / Martinique", grappa: "Grappa (Italie)", autres: "Autres",
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// PROJECTIONS
+// ─────────────────────────────────────────────────────────────────────────
+// World: lon [-130..150] -> x [0..900], lat [72..-10] -> y [0..480]
+function worldProject(lon, lat) {
+  const x = (lon + 130) * (900 / 280);
+  const y = (72 - lat) * (480 / 82);
+  return [x, y];
+}
+// Europe: lon [-11..13] -> x [0..900], lat [61..40] -> y [0..620]
+function euProject(lon, lat) {
+  if (lon < -11 || lon > 13 || lat < 40 || lat > 61) return null;
+  const x = (lon + 11) * (900 / 24);
+  const y = (61 - lat) * (620 / 21);
+  return [x, y];
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Plot sites on maps
+// ─────────────────────────────────────────────────────────────────────────
+const worldSitesGroup = document.getElementById("worldsites");
+const euSitesGroup = document.getElementById("eusites");
+const tooltip = document.getElementById("tooltip");
+
+// Manual label offsets for EU map (in SVG pixel units)
+const EU_LABEL_OFFSETS = {
+  "ardbeg":       { dx: -70, dy: 5, ha: "end" },
+  "traigh-bhan":  { dx: -70, dy: -8, ha: "end" },
+  "bruichladdich":{ dx: -70, dy: -6, ha: "end" },
+  "caolila":      { dx: 12,  dy: -10, ha: "start" },
+  "bunnahabhain": { dx: 12,  dy: 3, ha: "start" },
+  "lagavulin":    { dx: 12,  dy: 12, ha: "start" },
+  "glengoyne":    { dx: 12,  dy: 5, ha: "start" },
+  "dalmore":      { dx: 12,  dy: -5, ha: "start" },
+  "edradour":     { dx: -12, dy: 12, ha: "end" },
+  "macallan":     { dx: 12,  dy: -5, ha: "start" },
+  "glenfiddich":  { dx: 12,  dy: 8, ha: "start" },
+  "talisker":     { dx: -60, dy: 3, ha: "end" },
+  "scapa":        { dx: 12,  dy: 3, ha: "start" },
+  "wemyss":       { dx: 12,  dy: 3, ha: "start" },
+  "naguelann":    { dx: 12,  dy: -8, ha: "start" },
+  "warenghem":    { dx: -60, dy: 5, ha: "end" },
+  "menhirs":      { dx: -60, dy: -8, ha: "end" },
+  "ponant":       { dx: 12,  dy: 12, ha: "start" },
+  "piautre":      { dx: 12,  dy: -5, ha: "start" },
+  "vercors":      { dx: 12,  dy: 3, ha: "start" },
+  "mavela":       { dx: -60, dy: 3, ha: "end" },
+  "ninkasi":      { dx: 12,  dy: 3, ha: "start" },
+  "rozelieures":  { dx: 12,  dy: -3, ha: "start" },
+  "mauler":       { dx: 12,  dy: -8, ha: "start" },
+  "clos-groie":   { dx: -60, dy: 8, ha: "end" },
+  "montbord":     { dx: -60, dy: -3, ha: "end" },
+  "fourre":       { dx: 12,  dy: 8, ha: "start" },
+  "canonica":     { dx: 12,  dy: -5, ha: "start" },
+  "castelli":     { dx: 12,  dy: 8, ha: "start" },
+  "ibiza":        { dx: -60, dy: 3, ha: "end" },
+  "conciergerie": { dx: 12,  dy: 8, ha: "start" },
+};
+
+function makeSiteCircle(cx, cy, r, color, id, name, count) {
+  const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  c.setAttribute("cx", cx);
+  c.setAttribute("cy", cy);
+  c.setAttribute("r", r);
+  c.setAttribute("fill", color);
+  c.setAttribute("class", "site");
+  c.setAttribute("data-id", id);
+  c.setAttribute("data-name", name);
+  c.setAttribute("data-count", count);
+  return c;
+}
+
+function makeBzhRing(cx, cy, r) {
+  const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  c.setAttribute("cx", cx);
+  c.setAttribute("cy", cy);
+  c.setAttribute("r", r + 3);
+  c.setAttribute("class", "bzh-ring");
+  return c;
+}
+
+// Aggregate sites at the same location (Ardbeg + Traigh Bhan)
+const uniqSites = new Map();
+SITES.forEach(s => {
+  const key = s.sameSiteAs || s.id;
+  if (uniqSites.has(key)) {
+    const existing = uniqSites.get(key);
+    existing.count += s.count;
+    existing.expressions = existing.expressions.concat(s.expressions);
+  } else {
+    uniqSites.set(key, { ...s, expressions: [...s.expressions] });
+  }
+});
+
+// Plot on world map
+uniqSites.forEach(s => {
+  const [x, y] = worldProject(s.lon, s.lat);
+  const r = 4 + Math.sqrt(s.count) * 2;
+  worldSitesGroup.appendChild(makeSiteCircle(x, y, r, TYPE_COLORS[s.type], s.id, s.name, s.count));
+  if (s.bzh) {
+    worldSitesGroup.appendChild(makeBzhRing(x, y, r));
+  }
+});
+
+// Plot on EU map with labels
+uniqSites.forEach(s => {
+  const p = euProject(s.lon, s.lat);
+  if (!p) return;
+  const [x, y] = p;
+  const r = 5 + Math.sqrt(s.count) * 2.5;
+  euSitesGroup.appendChild(makeSiteCircle(x, y, r, TYPE_COLORS[s.type], s.id, s.name, s.count));
+  if (s.bzh) {
+    euSitesGroup.appendChild(makeBzhRing(x, y, r));
+  }
+
+  // Label
+  const off = EU_LABEL_OFFSETS[s.id] || { dx: 12, dy: 3, ha: "start" };
+  const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  t.setAttribute("x", x + off.dx);
+  t.setAttribute("y", y + off.dy);
+  t.setAttribute("text-anchor", off.ha === "end" ? "end" : "start");
+  t.setAttribute("class", "site-label" + (s.bzh ? " bzh" : ""));
+  t.setAttribute("font-size", "9");
+  t.textContent = s.name;
+  // white halo behind for readability
+  const tHalo = t.cloneNode(true);
+  tHalo.setAttribute("stroke", "white");
+  tHalo.setAttribute("stroke-width", "3");
+  tHalo.setAttribute("fill", "white");
+  euSitesGroup.appendChild(tHalo);
+  euSitesGroup.appendChild(t);
+});
+
+// Tooltip on hover
+document.querySelectorAll(".site").forEach(el => {
+  el.addEventListener("mouseenter", (e) => {
+    const id = el.getAttribute("data-id");
+    const name = el.getAttribute("data-name");
+    const count = el.getAttribute("data-count");
+    tooltip.innerHTML = `<strong>${name}</strong><br>${count} expression${count>1?'s':''}`;
+    tooltip.classList.add("show");
+  });
+  el.addEventListener("mousemove", (e) => {
+    tooltip.style.left = (e.pageX + 15) + "px";
+    tooltip.style.top  = (e.pageY - 30) + "px";
+  });
+  el.addEventListener("mouseleave", () => {
+    tooltip.classList.remove("show");
+  });
+  el.addEventListener("click", () => {
+    const id = el.getAttribute("data-id");
+    const cardEl = document.querySelector(`.card[data-siteid="${id}"]`);
+    if (cardEl) cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// STATISTICS
+// ─────────────────────────────────────────────────────────────────────────
+const typeCounts = {};
+SITES.forEach(s => { typeCounts[s.type] = (typeCounts[s.type] || 0) + s.count; });
+const totalExpr = Object.values(typeCounts).reduce((a,b)=>a+b, 0);
+
+// Legend counts
+["scotch","france","rhum","grappa","japon","canada","autres"].forEach(t => {
+  const el = document.getElementById(`count-${t}`);
+  if (el) el.textContent = typeCounts[t] || 0;
+});
+
+// Stat bars
+const statOrder = ["scotch","france","rhum","grappa","japon","canada","autres"];
+const barsContainer = document.getElementById("stat-bars");
+const maxCount = Math.max(...Object.values(typeCounts));
+statOrder.forEach(t => {
+  if (!typeCounts[t]) return;
+  const pct = (typeCounts[t] / maxCount) * 100;
+  const div = document.createElement("div");
+  div.className = "stat-bar";
+  div.innerHTML = `
+    <div class="stat-bar-fill" style="background: ${TYPE_COLORS[t]}; width: ${pct}%">
+      ${TYPE_LABELS[t]}
+    </div>
+    <div class="stat-bar-count">${typeCounts[t]}</div>
+  `;
+  barsContainer.appendChild(div);
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// CARDS
+// ─────────────────────────────────────────────────────────────────────────
+const cardGrid = document.getElementById("cardgrid");
+
+const BADGE_MAP = {
+  pepite: { cls: "b-pepite", label: "★ PÉPITE" },
+  rare:   { cls: "b-rare",   label: "◆ RARE" },
+  france: { cls: "b-france", label: "FR" },
+  bzh:    { cls: "b-bzh",    label: "BZH" },
+  peat:   { cls: "b-peat",   label: "~ TOURBÉ" },
+};
+
+// Flatten expressions into cards
+const ALL_CARDS = [];
+SITES.forEach(s => {
+  s.expressions.forEach(e => {
+    ALL_CARDS.push({
+      site: s,
+      expr: e,
+      isBzh: s.bzh,
+      isPepite: e.badges.includes("pepite"),
+    });
+  });
+});
+
+function renderCards(filter) {
+  cardGrid.innerHTML = "";
+  ALL_CARDS.forEach(({ site, expr, isBzh, isPepite }) => {
+    let show = false;
+    if (filter === "all") show = true;
+    else if (filter === "bzh") show = isBzh;
+    else if (filter === "pepite") show = isPepite;
+    else show = site.type === filter;
+
+    if (!show) return;
+
+    const card = document.createElement("div");
+    let cls = "card";
+    if (isPepite) cls += " pepite";
+    if (isBzh) cls += " bzh";
+    card.className = cls;
+    card.setAttribute("data-siteid", site.id);
+
+    const badgesHtml = expr.badges.map(b => {
+      const bm = BADGE_MAP[b];
+      return bm ? `<span class="badge ${bm.cls}">${bm.label}</span>` : "";
+    }).join("");
+
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-name">${expr.n}</div>
+        <div class="card-abv">${expr.abv}</div>
+      </div>
+      <div class="card-dist">${site.name} · ${site.region}</div>
+      <div class="card-meta">${expr.age}</div>
+      <div class="card-badges">${badgesHtml}</div>
+      <div class="card-notes">${expr.notes}</div>
+      ${expr.link && expr.link !== "#"
+        ? `<a class="card-link" href="${expr.link}" target="_blank" rel="noopener">Fiche producteur</a>`
+        : `<span class="card-link" style="color: var(--smoke); opacity: 0.5">Pièce artisanale</span>`
+      }
+    `;
+    cardGrid.appendChild(card);
+  });
+}
+
+renderCards("all");
+
+// Filter buttons
+document.querySelectorAll(".filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    renderCards(btn.getAttribute("data-filter"));
+  });
+});
+</script>
+
+</body>
+</html>
