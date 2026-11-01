@@ -133,8 +133,13 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
       <label class="small">Rangées<input id="sRows" type="number" min="1" max="16"></label>
       <label class="small">Emplacements par rangée<input id="sSlots" type="number" min="1" max="8"></label>
     </div>
-    <label class="small" style="display:block;margin-top:8px">Clé API Anthropic (pour l'IA, stockée uniquement sur ce téléphone)<input id="sKey" type="password" placeholder="sk-ant-…"></label>
-    <label class="small" style="display:block;margin-top:8px">Modèle<input id="sModel"></label>
+    <label class="small" style="display:block;margin-top:8px"><input type="checkbox" id="sBottom" style="width:auto"> Rangée 1 en bas du casier</label>
+    <label class="small" style="display:block"><input type="checkbox" id="sRight" style="width:auto"> Emplacement 1 à droite</label>
+    <label class="small" style="display:block;margin-top:8px">Fournisseur IA<select id="sProv"><option value="anthropic">Anthropic (Claude)</option><option value="gemini">Google (Gemini)</option></select></label>
+    <label class="small p-anth" style="display:block;margin-top:8px">Clé API Anthropic (stockée uniquement sur ce téléphone)<input id="sKey" type="password" placeholder="sk-ant-…" autocomplete="off"></label>
+    <label class="small p-anth" style="display:block;margin-top:8px">Modèle Claude<input id="sModel"></label>
+    <label class="small p-gem" style="display:block;margin-top:8px">Clé API Gemini (stockée uniquement sur ce téléphone)<input id="sGKey" type="password" placeholder="AIza…" autocomplete="off"></label>
+    <label class="small p-gem" style="display:block;margin-top:8px">Modèle Gemini<input id="sGModel"></label>
     <div class="row" style="margin-top:8px"><button class="b s" id="kBackup">Sauvegarde JSON</button><label class="b s" style="cursor:pointer">Restaurer<input type="file" id="kRestore" accept=".json" class="hide"></label><button class="b s" id="kReset">Réinitialiser la cave</button></div>
   </div>
 
@@ -300,6 +305,7 @@ $('cExport').onclick=()=>download('caveasy-journal.txt',logLines.join('\n'));
 $('cClear').onclick=()=>{if(confirm('Vider le journal ?')){logLines=[];store.set('caveasy_log',logLines);renderLog()}};
 renderLog();
 
+
 /* ================= Caveasy : protocole + inventaire =================
    Flux série sur notifications : 0xFF = séparateur de trame, 0xFE = échappement (octet suivant littéral).
    Trame = [checksum = somme des octets suivants mod 256][adresse][type][données]
@@ -321,8 +327,9 @@ function caveFrame(f){
   if(type===0x45&&d.length>=1)caveRowMask(addr,d[0]);
   else if(type===0x00&&addr>0){K.rowsSeen[addr]=d[0];if(addr>K.nRows){K.nRows=addr;$('sRows').value=addr}saveK();}
 }
-const KDEF={nRows:8,perRow:8,rows:{},slots:{},wines:{},moves:[],rowsSeen:{},model:'claude-sonnet-5-5'};
+const KDEF={ver:2,provider:'anthropic',bottomFirst:true,rightFirst:false,nRows:8,perRow:6,rows:{},slots:{},wines:{},moves:[],rowsSeen:{},model:'claude-sonnet-5-5'};
 let K=Object.assign({},KDEF,store.get('caveasy_state',{}));
+if(!K.ver||K.ver<2){K.ver=2;K.perRow=6;K.bottomFirst=true;}
 const saveK=()=>{store.set('caveasy_state',K);renderCave()};
 let session=null;const pendingIn={};
 const key=(r,i)=>r+'-'+i;
@@ -333,7 +340,7 @@ function caveRowMask(r,mask){
       const w=session?session.wineId:null;
       if(w)K.slots[k]=w;else if(!K.slots[k])K.slots[k]=null;
       const mv={t:Date.now(),k,type:'in',w:K.slots[k]};K.moves.unshift(mv);pendingIn[k]=mv;
-      if(session){session.n++;}
+      if(session){session.n++;}else if(!K.slots[k])selK=k;
       flash(k);
     }
     if(prev&bit&&!(mask&bit)){ // bouteille retirée
@@ -360,7 +367,7 @@ function upsertWine(data,id){
 }
 $('kStart').onclick=()=>{
   const d=readForm();if(!d.nom&&!d.domaine){alert('Indiquez au moins le vin ou le domaine.');return}
-  const id=upsertWine(d);session={wineId:id,n:0};saveK();
+  const id=upsertWine(formPhoto?{...d,photo:formPhoto}:d);formPhoto=null;session={wineId:id,n:0};saveK();
   $('kStart').classList.add('hide');$('kStop').classList.remove('hide');updSession();
 };
 $('kStop').onclick=()=>{session=null;$('kStart').classList.remove('hide');$('kStop').classList.add('hide');updSession();F.forEach(k=>$('f_'+k).value='')};
@@ -371,13 +378,15 @@ let selK=null;
 function renderCave(){
   if(!$('kGrid'))return;
   const n=K.nRows,p=K.perRow;let html='',count=0;
-  for(let r=1;r<=n;r++){
+  const order=Array.from({length:n},(_,j)=>K.bottomFirst?n-j:j+1),cols=Array.from({length:p},(_,j)=>K.rightFirst?p-1-j:j);
+  let unknown=0;
+  for(const r of order){
     html+=`<div class="cg" style="grid-template-columns:28px repeat(${p},1fr)"><span class="rl">R${r}</span>`;
-    for(let i=0;i<p;i++){const k=key(r,i),on=(K.rows[r]||0)&(1<<i),w=on?K.wines[K.slots[k]]:null;if(on)count++;
+    for(const i of cols){const k=key(r,i),on=(K.rows[r]||0)&(1<<i),w=on?K.wines[K.slots[k]]:null;if(on)count++;if(on&&!w)unknown++;
       html+=`<div class="cell ${on?'on c-'+(w?.couleur||'x'):''}" data-k="${k}" title="${esc(on?wineLabel(w):'vide')}">${on?(w?esc((w.millesime||'').slice(-2)||'•'):'?'):''}</div>`}
     html+='</div>';
   }
-  $('kGrid').innerHTML=html;$('kCount').textContent=`· ${count} bouteille(s)`;
+  $('kGrid').innerHTML=html;$('kCount').textContent=`· ${count} bouteille(s)${unknown?` · ${unknown} à identifier`:''}`;
   $('kGrid').querySelectorAll('.cell').forEach(c=>c.onclick=()=>{selK=c.dataset.k;showSlot()});
   if(selK)showSlot();renderInv();
 }
@@ -386,11 +395,15 @@ function showSlot(){
   const opts=Object.entries(K.wines).map(([id,x])=>`<option value="${id}" ${K.slots[selK]===id?'selected':''}>${esc(wineLabel(x))}</option>`).join('');
   $('kSlot').classList.remove('hide');
   $('kSlot').innerHTML=`<b>Rangée ${r}, emplacement ${i+1}</b> — ${on?'occupé':'vide'}<br>
-   ${w?`${esc(wineLabel(w))}${w.appellation?' — '+esc(w.appellation):''}${w.garde_de||w.garde_a?`<br>À boire : ${esc(w.garde_de||'?')} → ${esc(w.garde_a||'?')}`:''}${w.accords?`<br>Accords : ${esc(w.accords)}`:''}`:''}
+   ${w&&w.photo?`<img src="${w.photo}" alt="" style="float:right;max-height:90px;border-radius:6px;margin-left:8px">`:''}${on&&!w?`<div class="row" style="margin:6px 0"><label class="b" style="cursor:pointer">📷 Identifier cette bouteille<input type="file" id="slotPhoto" accept="image/*" capture="environment" class="hide"></label><span class="small" id="slotAi"></span></div>`:''}${w?`${esc(wineLabel(w))}${w.appellation?' — '+esc(w.appellation):''}${w.garde_de||w.garde_a?`<br>À boire : ${esc(w.garde_de||'?')} → ${esc(w.garde_a||'?')}`:''}${w.accords?`<br>Accords : ${esc(w.accords)}`:''}`:''}
    <div class="row" style="margin-top:6px"><select id="slotWine" style="flex:1"><option value="">— attribuer un vin —</option>${opts}</select>
    <button class="b s" id="slotToggle">${on?'Marquer vide':'Marquer occupé'}</button>${w?'<button class="b s" id="slotEdit">Fiche</button>':''}</div>`;
   $('slotWine').onchange=e=>{const v=e.target.value||null;K.slots[selK]=v;if(v)K.rows[r]=(K.rows[r]||0)|(1<<i);saveK()};
   $('slotToggle').onclick=()=>{K.rows[r]=(K.rows[r]||0)^(1<<i);if(!(K.rows[r]&(1<<i)))delete K.slots[selK];else if(!(selK in K.slots))K.slots[selK]=null;saveK()};
+  if($('slotPhoto'))$('slotPhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;const k=selK;$('slotAi').textContent='Analyse…';
+    try{const [img,photo]=await Promise.all([toJpeg(f,1024,0.8),toJpeg(f,240,0.6)]);const wd=await askAI(img,null);
+      const id=upsertWine({...wd,photo:'data:image/jpeg;base64,'+photo});K.slots[k]=id;const mv=K.moves.find(m=>m.k===k&&m.type==='in');if(mv&&!mv.w)mv.w=id;saveK();}
+    catch(err){$('slotAi').textContent='Erreur : '+err.message}};
   if(w)$('slotEdit').onclick=()=>{fillForm(w);$('kAddCard').scrollIntoView({behavior:'smooth'})};
 }
 
@@ -410,32 +423,52 @@ function renderInv(){
 
 /* ---- IA (API Anthropic, clé locale) ---- */
 const AI_PROMPT=`Tu es sommelier. Identifie ce vin et réponds UNIQUEMENT par un objet JSON avec les clés : nom, domaine, appellation, millesime, couleur (rouge|blanc|rosé|effervescent|liquoreux), cepages, garde_de (année à partir de laquelle le boire), garde_a (année limite), accords (texte court), description (2-3 phrases : style, température de service, carafage). Si une information est incertaine, donne ta meilleure estimation ; laisse vide ce que tu ignores.`;
-async function askAI(content){
-  const k=K.apiKey;if(!k){alert('Renseignez votre clé API Anthropic dans Réglages.');return}
-  $('kAiStatus').textContent='Analyse en cours…';
-  try{
+async function askAI(imageB64,known){
+  const k=K.provider==='gemini'?K.geminiKey:K.apiKey;if(!k)throw new Error('clé API manquante (Réglages)');
+  const prompt=AI_PROMPT+(imageB64?' Voici la photo de l\'étiquette.':'')+(known?' Informations connues : '+JSON.stringify(known):'');
+  let txt;
+  if(K.provider==='gemini'){
+    const model=K.geminiModel||'gemini-2.5-flash';
+    const parts=[{text:prompt}];if(imageB64)parts.unshift({inline_data:{mime_type:'image/jpeg',data:imageB64}});
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':k},
+      body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json'}})});
+    const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);
+    txt=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+  }else{
+    const content=[{type:'text',text:prompt}];if(imageB64)content.unshift({type:'image',source:{type:'base64',media_type:'image/jpeg',data:imageB64}});
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
       body:JSON.stringify({model:K.model||KDEF.model,max_tokens:800,messages:[{role:'user',content}]})});
     const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);
-    const txt=j.content.map(c=>c.text||'').join(''),m=txt.match(/\{[\s\S]*\}/);if(!m)throw new Error('réponse illisible');
-    const w=JSON.parse(m[0]);['millesime','garde_de','garde_a'].forEach(x=>{if(w[x]!=null)w[x]=String(w[x])});fillForm(w);$('kAiStatus').textContent='Fiche remplie ✓ (vérifiez-la)';
-  }catch(e){$('kAiStatus').textContent='Erreur IA : '+e.message}
+    txt=j.content.map(c=>c.text||'').join('');
+  }
+  const m=txt.match(/\{[\s\S]*\}/);if(!m)throw new Error('réponse illisible');
+  const w=JSON.parse(m[0]);['millesime','garde_de','garde_a'].forEach(x=>{if(w[x]!=null)w[x]=String(w[x])});
+  for(const x of Object.keys(w))if(Array.isArray(w[x]))w[x]=w[x].join(', ');
+  return w;
 }
-function toJpeg(file){return new Promise((ok,ko)=>{const img=new Image();img.onload=()=>{const s=Math.min(1,1280/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',0.85).split(',')[1])};img.onerror=ko;img.src=URL.createObjectURL(file)})}
-$('kPhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;const data=await toJpeg(f);e.target.value='';
-  askAI([{type:'image',source:{type:'base64',media_type:'image/jpeg',data}},{type:'text',text:AI_PROMPT+' Voici la photo de l\'étiquette.'}])};
-$('kAiText').onclick=()=>{const d=readForm();if(!d.nom&&!d.domaine){alert('Saisissez au moins le vin ou le domaine.');return}
-  askAI([{type:'text',text:AI_PROMPT+' Informations connues : '+JSON.stringify(d)}])};
-
+function toJpeg(file,max=1024,q=0.8){return new Promise((ok,ko)=>{const img=new Image();img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(img.src);ok(c.toDataURL('image/jpeg',q).split(',')[1])};img.onerror=ko;img.src=URL.createObjectURL(file)})}
+let formPhoto=null;
+$('kPhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;e.target.value='';$('kAiStatus').textContent='Analyse en cours…';
+  try{const [img,photo]=await Promise.all([toJpeg(f,1024,0.8),toJpeg(f,240,0.6)]);formPhoto='data:image/jpeg;base64,'+photo;fillForm(await askAI(img,null));$('kAiStatus').textContent='Fiche remplie ✓ (vérifiez-la)'}
+  catch(err){$('kAiStatus').textContent='Erreur IA : '+err.message}};
+$('kAiText').onclick=async()=>{const d=readForm();if(!d.nom&&!d.domaine){alert('Saisissez au moins le vin ou le domaine.');return}
+  $('kAiStatus').textContent='Analyse en cours…';try{fillForm(await askAI(null,d));$('kAiStatus').textContent='Fiche complétée ✓'}catch(err){$('kAiStatus').textContent='Erreur IA : '+err.message}};
 /* ---- réglages / sauvegarde ---- */
+$('sBottom').checked=K.bottomFirst;$('sRight').checked=K.rightFirst;$('sProv').value=K.provider;$('sGKey').value=K.geminiKey||'';$('sGModel').value=K.geminiModel||'gemini-2.5-flash';provUI();
 $('sRows').value=K.nRows;$('sSlots').value=K.perRow;$('sKey').value=K.apiKey||'';$('sModel').value=K.model||KDEF.model;
 $('sRows').onchange=e=>{K.nRows=Math.max(1,Math.min(16,+e.target.value||8));saveK()};
 $('sSlots').onchange=e=>{K.perRow=Math.max(1,Math.min(8,+e.target.value||8));saveK()};
+function provUI(){document.querySelectorAll('.p-anth').forEach(e=>e.classList.toggle('hide',K.provider!=='anthropic'));document.querySelectorAll('.p-gem').forEach(e=>e.classList.toggle('hide',K.provider!=='gemini'))}
+$('sProv').onchange=e=>{K.provider=e.target.value;provUI();saveK()};
+$('sGKey').onchange=e=>{K.geminiKey=e.target.value.trim();saveK()};
+$('sGModel').onchange=e=>{K.geminiModel=e.target.value.trim();saveK()};
+$('sBottom').onchange=e=>{K.bottomFirst=e.target.checked;saveK()};
+$('sRight').onchange=e=>{K.rightFirst=e.target.checked;saveK()};
 $('sKey').onchange=e=>{K.apiKey=e.target.value.trim();saveK()};
 $('sModel').onchange=e=>{K.model=e.target.value.trim()||KDEF.model;saveK()};
-$('kBackup').onclick=()=>{const {apiKey,...rest}=K;download('caveasy-sauvegarde.json',JSON.stringify(rest,null,1),'application/json')};
-$('kRestore').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());K=Object.assign({},KDEF,d,{apiKey:K.apiKey});saveK()}catch{alert('Fichier invalide')}};
-$('kReset').onclick=()=>{if(confirm('Effacer inventaire, fiches et mouvements ?')){K=Object.assign({},KDEF,{apiKey:K.apiKey,model:K.model});saveK()}};
+$('kBackup').onclick=()=>{const {apiKey,geminiKey,...rest}=K;download('caveasy-sauvegarde.json',JSON.stringify(rest,null,1),'application/json')};
+$('kRestore').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());K=Object.assign({},KDEF,d,{apiKey:K.apiKey,geminiKey:K.geminiKey});saveK()}catch{alert('Fichier invalide')}};
+$('kReset').onclick=()=>{if(confirm('Effacer inventaire, fiches et mouvements ?')){K=Object.assign({},KDEF,{apiKey:K.apiKey,model:K.model,geminiKey:K.geminiKey,geminiModel:K.geminiModel,provider:K.provider});saveK()}};
 renderCave();
 </script>
 </body>
