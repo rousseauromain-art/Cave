@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cave Revival</title>
+<style>
+:root{--bg:#f7f3f0;--card:#fff;--ink:#2a1a1f;--mute:#7a6a70;--wine:#7b1e3a;--wine2:#b24a68;--ok:#2e7d4f;--warn:#b86e00;--line:#e6dcd8;--chg:#ffe08a}
+@media (prefers-color-scheme:dark){:root{--bg:#181214;--card:#231b1e;--ink:#f1e8ea;--mute:#a8959b;--line:#3a2e32;--wine2:#d4708c;--chg:#6b5200}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--wine);color:#fff;padding:14px 16px}header h1{margin:0;font-size:19px}header p{margin:2px 0 0;opacity:.8;font-size:13px}
+nav{display:flex;gap:4px;padding:8px 16px 0;background:var(--wine)}nav button{flex:1;border:0;background:transparent;color:#fff;opacity:.7;padding:10px;font-weight:600;border-bottom:3px solid transparent}
+nav button.on{opacity:1;border-color:#fff}
+main{max-width:760px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:16px}
+.b{display:inline-block;background:var(--wine);color:#fff;border:0;border-radius:8px;padding:10px 14px;font-weight:600;font-size:14px}
+.b.s{background:transparent;color:var(--wine2);border:1px solid var(--wine2)}
+button.b:disabled{opacity:.4}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.status{font-size:13px;color:var(--mute)}.msg{padding:10px 12px;border-radius:8px;background:var(--bg);margin-top:10px;font-size:14px}
+.msg.warn{border-left:4px solid var(--warn)}.msg.ok{border-left:4px solid var(--ok)}
+.bar{margin:8px 0}.bar label{display:flex;justify-content:space-between;font-size:13px}.bar .t{height:10px;background:var(--line);border-radius:5px;overflow:hidden}.bar .f{height:100%;background:linear-gradient(90deg,var(--wine2),var(--wine))}
+input,textarea,select{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{min-height:60px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
+.chg{background:var(--chg);border-radius:2px}
+.log{max-height:320px;overflow:auto;background:var(--bg);border-radius:8px;padding:8px}
+.hide{display:none}.small{font-size:12px;color:var(--mute)}
+.char{border-top:1px solid var(--line);padding:8px 0}.char:first-child{border-top:0}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:var(--bg);margin-right:4px}
+</style>
+</head>
+<body>
+<header><h1>Cave Revival</h1><p>Pilote libre pour le scanner MyOeno et le casier Caveasy</p></header>
+<nav><button data-tab="oeno" class="on">Scanner MyOeno</button><button data-tab="cave">Casier Caveasy</button></nav>
+<main>
+<div id="nobt" class="card hide"><b>Web Bluetooth indisponible.</b> Ouvrez cette page dans Chrome (Android ou PC), servie en HTTPS (ex. GitHub Pages).</div>
+
+<!-- ============ MYOENO ============ -->
+<section id="tab-oeno">
+  <div class="card">
+    <h2>Scanner</h2>
+    <div class="row">
+      <button class="b" id="oConnect">Connecter le scanner</button>
+      <button class="b s" id="oDisc" disabled>Déconnecter</button>
+      <span class="status" id="oStatus">Allumez le scanner (bouton ON/OFF, il doit clignoter).</span>
+    </div>
+    <div id="oMsg"></div>
+  </div>
+
+  <div class="card hide" id="oResult">
+    <h2>Profil du vin</h2>
+    <div id="oBars"></div>
+    <p id="oDesc" style="font-style:italic"></p>
+    <div class="small mono" id="oRaw"></div>
+    <h2 style="margin-top:14px">Enregistrer la dégustation</h2>
+    <div class="grid2">
+      <input id="wName" placeholder="Vin (domaine, cuvée)">
+      <input id="wYear" placeholder="Millésime" inputmode="numeric">
+    </div>
+    <div class="grid2" style="margin-top:8px">
+      <select id="wRate"><option value="">Note…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+      <input id="wAroma" placeholder="Arômes">
+    </div>
+    <textarea id="wNote" style="margin-top:8px" placeholder="Notes de dégustation"></textarea>
+    <div class="row" style="margin-top:8px"><button class="b" id="wSave">Enregistrer</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Mes dégustations</h2>
+    <div class="row" style="margin-bottom:8px"><button class="b s" id="hCsv">Exporter CSV</button><button class="b s" id="hJson">Sauvegarde JSON</button><label class="b s" style="cursor:pointer">Restaurer<input type="file" id="hImp" accept=".json" class="hide"></label></div>
+    <div id="hList" class="small">Aucune mesure enregistrée.</div>
+  </div>
+</section>
+
+<!-- ============ CAVEASY ============ -->
+<section id="tab-cave" class="hide">
+  <div class="card">
+    <h2>Explorateur du casier</h2>
+    <p class="small">Connectez-vous, puis ajoutez/retirez une bouteille à la fois en notant l'emplacement. Les octets qui changent sont surlignés : c'est ce qui révèle le protocole.</p>
+    <div class="row">
+      <button class="b" id="cConnect">Connecter Caveasy</button>
+      <button class="b s" id="cDisc" disabled>Déconnecter</button>
+      <label class="small"><input type="checkbox" id="cPoll" style="width:auto"> Relire toutes les 2 s</label>
+    </div>
+    <div class="status" id="cStatus" style="margin-top:8px"></div>
+  </div>
+  <div class="card hide" id="cChars"><h2>Caractéristiques</h2><div id="cList"></div></div>
+  <div class="card">
+    <h2>Journal</h2>
+    <div class="row" style="margin-bottom:8px">
+      <input id="cNote" placeholder="Annotation (ex. « retiré bouteille emplacement 3 »)" style="flex:1">
+      <button class="b s" id="cAddNote">Noter</button>
+    </div>
+    <div class="log mono" id="cLog"></div>
+    <div class="row" style="margin-top:8px"><button class="b s" id="cExport">Exporter le journal</button><button class="b s" id="cClear">Vider</button></div>
+  </div>
+</section>
+</main>
+
+<script>
+/* ---------- utilitaires ---------- */
+const $=id=>document.getElementById(id);
+const hex=dv=>[...new Uint8Array(dv.buffer,dv.byteOffset,dv.byteLength)].map(b=>b.toString(16).padStart(2,'0')).join(' ');
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+const download=(name,text,type='text/plain')=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+if(!navigator.bluetooth) $('nobt').classList.remove('hide');
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));['oeno','cave'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.tab))});
+
+/* ---------- MyOeno : algorithme d'origine (ComputeKt.computeData, app 2.3), vérifié à l'identique ---------- */
+function myoenoCompute(d){
+  const c1=v=>v>1?1:v;
+  const r=c1(d[3]/(d[0]*1.17)),g=c1(d[4]/(d[1]*1.17)),b=c1(d[5]/(d[2]*1.17));
+  const lin=v=>v>0.04045?Math.pow((v+0.055)/1.055,2.4):v/12.92;
+  const R=lin(r)*100,G=lin(g)*100,B=lin(b)*100;
+  const X=0.4124*R+0.3576*G+0.1805*B,Y=0.2126*R+0.7152*G+0.0722*B,Z=R*0.0193+G*0.1192+B*0.9505;
+  const f=t=>t>0.008856?Math.pow(t,1/3):t*7.787+0.13793103448275862;
+  const fx=f(X/95.047),fy=f(Y/100),fz=f(Z/108.883);
+  const L=116*fy-16,A=500*(fx-fy),Bl=200*(fy-fz);
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),dl=mx-mn;let h=0;
+  if(mx!==mn){if(mx===r)h=(g-b)/dl+(g<b?6:0);else if(mx===g)h=(b-r)/dl+2;else h=(r-g)/dl+4;h/=6}
+  const h2=h<0.166?h+0.834:h-0.166;
+  let ev=((h2-0.8)*80)/0.06999999999999995;ev=ev<0?0:ev>100?100:ev;
+  const k=-0.15*ev,d50=Bl+k,d51=100-L+k;
+  const d55=(((100-A+(100-ev))/2-41)*41)/30+30;
+  let tan=((d50-4)*70)/28+15,pui=((d51-26)*65)/50+20,viv=d55+((d55-pui-10)/10)*3;
+  const evo=ev<10?10:ev>90?90:ev,cl=v=>v<5?5:v>95?95:v;
+  viv=cl(viv);tan=cl(tan);pui=cl(pui);
+  const garde=(tan/7-2)*((100-evo)/100);
+  return [pui,tan,viv,garde,evo].map(v=>Number.isFinite(v)?Math.round(v):null);
+}
+const SVC_BAT=0x180f,CH_BAT=0x2a19;
+const SVC_SCAN='f92158cd-26d2-4afc-8746-44bc9d7cc527',CH_SCAN='e5042891-e937-48c5-8471-c8322ab7e81f';
+const STATES={1:['ok',"Vous pouvez plonger la pointe du Scanner dans votre verre de vin."],2:['warn',"Lumière ambiante trop intense : mettez-vous à l'abri de la lumière."],3:['warn',"Lumière trop instable : mettez-vous à l'abri de la lumière."],4:['ok',"Le scan est en cours…"]};
+let oDev=null,oState=-1,lastMeasure=null;
+function oMsg(cls,t){$('oMsg').innerHTML=`<div class="msg ${cls}">${esc(t)}</div>`}
+$('oConnect').onclick=async()=>{
+  try{
+    oDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SVC_BAT,SVC_SCAN]});
+    oDev.addEventListener('gattserverdisconnected',()=>{$('oStatus').textContent='Déconnecté.';$('oDisc').disabled=true;$('oConnect').disabled=false});
+    $('oStatus').textContent='Connexion à '+(oDev.name||'appareil')+'…';
+    const srv=await oDev.gatt.connect();
+    $('oConnect').disabled=true;$('oDisc').disabled=false;
+    try{const bat=await(await(await srv.getPrimaryService(SVC_BAT)).getCharacteristic(CH_BAT)).readValue();
+      const lvl=bat.getUint8(0);$('oStatus').textContent=`Connecté · batterie ${lvl} %`;
+      if(lvl<25)oMsg('warn','Batterie critique : rechargez le scanner si la mesure échoue.');}catch(e){$('oStatus').textContent='Connecté (batterie illisible)'}
+    const ch=await(await srv.getPrimaryService(SVC_SCAN)).getCharacteristic(CH_SCAN);
+    try{await ch.readValue()}catch{}
+    ch.addEventListener('characteristicvaluechanged',e=>onScan(e.target.value));
+    await ch.startNotifications();
+    oMsg('ok','Scanner prêt. Placez-vous à l\'abri d\'une lumière directe.');
+  }catch(e){$('oStatus').textContent='Erreur : '+e.message}
+};
+$('oDisc').onclick=()=>oDev?.gatt.connected&&oDev.gatt.disconnect();
+function onScan(dv){
+  if(dv.byteLength<12)return;
+  const st=dv.getUint8(11);
+  if(STATES[st]){if(st!==oState)oMsg(...STATES[st]);oState=st;return}
+  oState=st; if(st===0)return;
+  const raw=[0,1,2,3,4,5].map(i=>dv.getUint16(i*2,false)); // big-endian, comme l'app
+  const v=myoenoCompute(raw);
+  lastMeasure={date:new Date().toISOString(),raw,puissance:v[0],tanins:v[1],vivacite:v[2],garde:v[3],evolution:v[4]};
+  showMeasure(lastMeasure); oMsg('ok','Mesure terminée 🍷');
+}
+const LBL=[['puissance','Puissance',100],['tanins','Tanins',100],['vivacite','Vivacité',100],['evolution','Évolution',100],['garde','Potentiel de garde (indice)',12]];
+function describe(m){
+  const pick=(v,t)=>{for(const[a,b,w]of t)if(v>=a&&v<b)return w;return null};
+  const tan=pick(m.tanins,[[0,40,'discrets'],[40,50,'souples'],[50,60,'légers'],[60,70,'fermes'],[70,101,'rugueux']]);
+  const viv=pick(m.vivacite,[[0,40,'tendre'],[40,50,'ferme'],[50,60,'vigoureux'],[60,70,'anguleux'],[70,80,'incisif'],[80,101,'mordant']]);
+  const pui=m.puissance>70?'le côté alcooleux':m.puissance>55?'la chaleur':m.puissance>40?'l\'opulence':'la légèreté';
+  const dom=[['puissance',m.puissance],['tanins',m.tanins],['vivacité',m.vivacite]].sort((a,b)=>b[1]-a[1])[0][0];
+  return `Dominante : ${dom}. On retrouve des tanins ${tan}, une acidité rendant ce vin ${viv}, et une puissance qui exprime ${pui} du vin.${m.evolution>45?' Vin déjà évolué.':' Vin encore jeune.'}`;
+}
+function showMeasure(m){
+  $('oResult').classList.remove('hide');
+  $('oBars').innerHTML=LBL.map(([k,l,max])=>`<div class="bar"><label><span>${l}</span><b>${m[k]}</b></label><div class="t"><div class="f" style="width:${Math.max(0,Math.min(100,m[k]/max*100))}%"></div></div></div>`).join('');
+  $('oDesc').textContent=describe(m);
+  $('oRaw').textContent='Brut (réf RGB / vin RGB) : '+m.raw.join(' · ');
+}
+let hist=store.get('myoeno_hist',[]);
+function renderHist(){
+  if(!hist.length){$('hList').textContent='Aucune mesure enregistrée.';return}
+  $('hList').innerHTML='<table><tr><th>Date</th><th>Vin</th><th>★</th><th>P</th><th>T</th><th>V</th><th>É</th><th></th></tr>'+hist.map((h,i)=>`<tr><td>${h.date.slice(0,10)}</td><td>${esc(h.nom)} ${esc(h.millesime)}</td><td>${esc(h.note)}</td><td>${h.puissance}</td><td>${h.tanins}</td><td>${h.vivacite}</td><td>${h.evolution}</td><td><a href="#" data-del="${i}">✕</a></td></tr>`).join('')+'</table>';
+  $('hList').querySelectorAll('[data-del]').forEach(a=>a.onclick=e=>{e.preventDefault();if(confirm('Supprimer ?')){hist.splice(+a.dataset.del,1);store.set('myoeno_hist',hist);renderHist()}});
+}
+$('wSave').onclick=()=>{if(!lastMeasure)return;hist.unshift({...lastMeasure,nom:$('wName').value,millesime:$('wYear').value,note:$('wRate').value,aromes:$('wAroma').value,commentaire:$('wNote').value});store.set('myoeno_hist',hist);renderHist();['wName','wYear','wAroma','wNote'].forEach(i=>$(i).value='');$('wRate').value='';};
+$('hCsv').onclick=()=>{const k=['date','nom','millesime','note','puissance','tanins','vivacite','garde','evolution','aromes','commentaire'];download('degustations.csv','﻿'+[k.join(';'),...hist.map(h=>k.map(x=>`"${String(h[x]??'').replace(/"/g,'""')}"`).join(';'))].join('\n'),'text/csv')};
+$('hJson').onclick=()=>download('myoeno-sauvegarde.json',JSON.stringify(hist,null,1),'application/json');
+$('hImp').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());if(Array.isArray(d)){hist=d;store.set('myoeno_hist',hist);renderHist()}}catch{alert('Fichier invalide')}};
+renderHist();
+
+/* ---------- Caveasy : explorateur GATT ---------- */
+const CAVE_SVC='569a1101-b87f-490c-92cb-11ba5ea5167c';
+let cDev=null,cChars=[],pollT=null,logLines=store.get('caveasy_log',[]);const last={};
+function log(line){const t=new Date().toLocaleTimeString();logLines.push(`${t}  ${line}`);if(logLines.length>2000)logLines.shift();store.set('caveasy_log',logLines);renderLog()}
+function renderLog(){$('cLog').innerHTML=logLines.slice(-300).map(l=>esc(l)).join('<br>');$('cLog').scrollTop=1e9}
+function diffHtml(prev,cur){const a=cur.split(' '),p=prev?prev.split(' '):[];return a.map((b,i)=>p.length&&p[i]!==b?`<span class="chg">${b}</span>`:b).join(' ')}
+function bits(h){return h.split(' ').map(b=>parseInt(b,16).toString(2).padStart(8,'0')).join(' ')}
+function onVal(c,dv,src){
+  const h=hex(dv),id=c.uuid,prev=last[id];
+  const el=$('v-'+id);if(el)el.innerHTML=`${diffHtml(prev,h)}<div class="small">${bits(h)}</div>`;
+  if(prev!==h){log(`${src} ${id.slice(4,8)} : ${h}${prev!==undefined?'   (avant : '+prev+')':''}`)}
+  last[id]=h;
+}
+$('cConnect').onclick=async()=>{
+  try{
+    cDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[CAVE_SVC,0x180a,0x180f]});
+    cDev.addEventListener('gattserverdisconnected',()=>{$('cStatus').textContent='Déconnecté.';log('--- déconnecté');$('cDisc').disabled=true;$('cConnect').disabled=false;clearInterval(pollT)});
+    const srv=await cDev.gatt.connect();log(`--- connecté à ${cDev.name||'?'} (${cDev.id})`);
+    $('cConnect').disabled=true;$('cDisc').disabled=false;
+    const svcs=await srv.getPrimaryServices();cChars=[];
+    for(const s of svcs){try{for(const c of await s.getCharacteristics())cChars.push(c)}catch{}}
+    $('cStatus').textContent=`${svcs.length} service(s), ${cChars.length} caractéristique(s).`;
+    $('cChars').classList.remove('hide');
+    $('cList').innerHTML=cChars.map(c=>{const p=c.properties,tags=['read','write','writeWithoutResponse','notify','indicate'].filter(k=>p[k]);
+      return `<div class="char"><div class="mono"><b>${c.uuid}</b></div><div>${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <div class="mono" id="v-${c.uuid}" style="margin-top:4px">—</div>
+      ${(p.write||p.writeWithoutResponse)?`<div class="row" style="margin-top:4px"><input class="mono" id="w-${c.uuid}" placeholder="octets hex, ex. 01 00" style="flex:1"><button class="b s" data-w="${c.uuid}">Écrire</button></div>`:''}</div>`}).join('');
+    $('cList').querySelectorAll('[data-w]').forEach(b=>b.onclick=async()=>{const c=cChars.find(x=>x.uuid===b.dataset.w);const bytes=new Uint8Array(($('w-'+c.uuid).value.match(/[0-9a-f]{2}/gi)||[]).map(x=>parseInt(x,16)));
+      try{c.properties.write?await c.writeValueWithResponse(bytes):await c.writeValueWithoutResponse(bytes);log(`ÉCRIT ${c.uuid.slice(4,8)} : ${hex(new DataView(bytes.buffer))}`)}catch(e){log('erreur écriture : '+e.message)}});
+    for(const c of cChars){
+      if(c.properties.read)try{onVal(c,await c.readValue(),'LU ')}catch(e){log(`lecture ${c.uuid.slice(4,8)} refusée`)}
+      if(c.properties.notify||c.properties.indicate){c.addEventListener('characteristicvaluechanged',e=>onVal(c,e.target.value,'NOTIF'));try{await c.startNotifications();log(`abonné ${c.uuid.slice(4,8)}`)}catch(e){log(`abonnement ${c.uuid.slice(4,8)} refusé`)}}
+    }
+    setPoll();
+  }catch(e){$('cStatus').textContent='Erreur : '+e.message}
+};
+async function pollOnce(){for(const c of cChars)if(c.properties.read)try{onVal(c,await c.readValue(),'LU ')}catch{}}
+function setPoll(){clearInterval(pollT);if($('cPoll').checked&&cDev?.gatt.connected)pollT=setInterval(pollOnce,2000)}
+$('cPoll').onchange=setPoll;
+$('cDisc').onclick=()=>cDev?.gatt.connected&&cDev.gatt.disconnect();
+$('cAddNote').onclick=()=>{const v=$('cNote').value.trim();if(v){log('### '+v);$('cNote').value=''}};
+$('cExport').onclick=()=>download('caveasy-journal.txt',logLines.join('\n'));
+$('cClear').onclick=()=>{if(confirm('Vider le journal ?')){logLines=[];store.set('caveasy_log',logLines);renderLog()}};
+renderLog();
+</script>
+</body>
+</html>
