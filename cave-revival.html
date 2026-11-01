@@ -29,6 +29,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
 .log{max-height:320px;overflow:auto;background:var(--bg);border-radius:8px;padding:8px}
 .hide{display:none}.small{font-size:12px;color:var(--mute)}
 .char{border-top:1px solid var(--line);padding:8px 0}.char:first-child{border-top:0}
+.cg{display:grid;gap:4px;margin:4px 0}.cg .rl{font-size:11px;color:var(--mute);align-self:center}.cell{aspect-ratio:1;border-radius:50%;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;color:#fff;overflow:hidden}.cell.on{border-style:solid}.c-rouge{background:#7b1e3a}.c-blanc{background:#d9c46a;color:#3a3000}.c-rosé{background:#e98fa5}.c-effervescent{background:#e6d9a8;color:#3a3000}.c-liquoreux{background:#c98a1b}.c-x{background:#8a8a8a}.cell.flash{outline:3px solid var(--ok)}details summary{cursor:pointer}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:var(--bg);margin-right:4px}
 </style>
 </head>
@@ -79,8 +80,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
 <!-- ============ CAVEASY ============ -->
 <section id="tab-cave" class="hide">
   <div class="card">
-    <h2>Explorateur du casier</h2>
-    <p class="small">Connectez-vous, puis ajoutez/retirez une bouteille à la fois en notant l'emplacement. Les octets qui changent sont surlignés : c'est ce qui révèle le protocole.</p>
+    <h2>Casier</h2>
+    <p class="small">Connectez le casier : chaque bouteille posée ou retirée met l'inventaire à jour.</p>
     <div class="row">
       <button class="b" id="cConnect">Connecter Caveasy</button>
       <button class="b s" id="cAll">Tous les appareils</button>
@@ -89,8 +90,57 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
     </div>
     <div class="status" id="cStatus" style="margin-top:8px"></div>
   </div>
-  <div class="card hide" id="cChars"><h2>Caractéristiques</h2><div id="cList"></div></div>
+  <div class="card" id="kAddCard">
+    <h2>Ranger des bouteilles</h2>
+    <p class="small">Identifiez le vin (photo de l'étiquette ou saisie), lancez le rangement, puis déposez les bouteilles : elles lui sont attribuées automatiquement.</p>
+    <div class="row" style="margin-bottom:8px">
+      <label class="b s" style="cursor:pointer">📷 Photo étiquette<input type="file" id="kPhoto" accept="image/*" capture="environment" class="hide"></label>
+      <button class="b s" id="kAiText">✨ Compléter la fiche</button>
+      <span class="small" id="kAiStatus"></span>
+    </div>
+    <div class="grid2">
+      <input id="f_nom" placeholder="Vin / cuvée"><input id="f_domaine" placeholder="Domaine / château">
+      <input id="f_appellation" placeholder="Appellation"><input id="f_millesime" placeholder="Millésime" inputmode="numeric">
+      <select id="f_couleur"><option value="">Couleur…</option><option>rouge</option><option>blanc</option><option>rosé</option><option>effervescent</option><option>liquoreux</option></select>
+      <input id="f_cepages" placeholder="Cépages">
+      <input id="f_garde_de" placeholder="À boire à partir de (année)" inputmode="numeric"><input id="f_garde_a" placeholder="À boire avant (année)" inputmode="numeric">
+    </div>
+    <input id="f_accords" style="margin-top:8px" placeholder="Accords mets-vins">
+    <textarea id="f_description" style="margin-top:8px" placeholder="Description, service, carafage…"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="b" id="kStart">Commencer le rangement</button>
+      <button class="b s hide" id="kStop">Terminé</button>
+      <span id="kSession" class="small"></span>
+    </div>
+  </div>
+
   <div class="card">
+    <h2>Ma cave <span class="small" id="kCount"></span></h2>
+    <div id="kGrid"></div>
+    <p class="small">Touchez un emplacement pour voir ou modifier la bouteille. ? = bouteille détectée mais non identifiée.</p>
+    <div id="kSlot" class="msg hide"></div>
+  </div>
+
+  <div class="card">
+    <h2>Inventaire</h2>
+    <div class="row" style="margin-bottom:8px"><button class="b s" data-inv="cave">En cave</button><button class="b s" data-inv="boire">À boire</button><button class="b s" data-inv="moves">Entrées / sorties</button></div>
+    <div id="kInv" class="small"></div>
+  </div>
+
+  <div class="card">
+    <h2>Réglages</h2>
+    <div class="grid2">
+      <label class="small">Rangées<input id="sRows" type="number" min="1" max="16"></label>
+      <label class="small">Emplacements par rangée<input id="sSlots" type="number" min="1" max="8"></label>
+    </div>
+    <label class="small" style="display:block;margin-top:8px">Clé API Anthropic (pour l'IA, stockée uniquement sur ce téléphone)<input id="sKey" type="password" placeholder="sk-ant-…"></label>
+    <label class="small" style="display:block;margin-top:8px">Modèle<input id="sModel"></label>
+    <div class="row" style="margin-top:8px"><button class="b s" id="kBackup">Sauvegarde JSON</button><label class="b s" style="cursor:pointer">Restaurer<input type="file" id="kRestore" accept=".json" class="hide"></label><button class="b s" id="kReset">Réinitialiser la cave</button></div>
+  </div>
+
+  <details class="card"><summary><b>Mode expert</b> (trames brutes)</summary>
+  <div class="hide" id="cChars"><h2>Caractéristiques</h2><div id="cList"></div></div>
+  <div>
     <h2>Journal</h2>
     <div class="row" style="margin-bottom:8px">
       <input id="cNote" placeholder="Annotation (ex. « retiré bouteille emplacement 3 »)" style="flex:1">
@@ -99,6 +149,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
     <div class="log mono" id="cLog"></div>
     <div class="row" style="margin-top:8px"><button class="b s" id="cExport">Exporter le journal</button><button class="b s" id="cClear">Vider</button></div>
   </div>
+  </details>
 </section>
 </main>
 
@@ -214,6 +265,7 @@ function onVal(c,dv,src){
   const el=$('v-'+id);if(el)el.innerHTML=`${diffHtml(prev,h)}<div class="small">${bits(h)}</div>`;
   if(prev!==h){log(`${src} ${id.slice(4,8)} : ${h}${prev!==undefined?'   (avant : '+prev+')':''}`)}
   last[id]=h;
+  if(src==='NOTIF')caveFeed(new Uint8Array(dv.buffer,dv.byteOffset,dv.byteLength));
 }
 const cConnect=async(all)=>{
   try{
@@ -247,6 +299,144 @@ $('cAddNote').onclick=()=>{const v=$('cNote').value.trim();if(v){log('### '+v);$
 $('cExport').onclick=()=>download('caveasy-journal.txt',logLines.join('\n'));
 $('cClear').onclick=()=>{if(confirm('Vider le journal ?')){logLines=[];store.set('caveasy_log',logLines);renderLog()}};
 renderLog();
+
+/* ================= Caveasy : protocole + inventaire =================
+   Flux série sur notifications : 0xFF = séparateur de trame, 0xFE = échappement (octet suivant littéral).
+   Trame = [checksum = somme des octets suivants mod 256][adresse][type][données]
+   type 0x45 : changement capteurs d'une rangée -> [masque présent][bits éteints][bits allumés]
+   type 0x00 : état rangée (adresses 1..n) ; type 0x40 : module ; adresse 0 type 0x21 : passerelle (journal horodaté) */
+let cBuf=[],cEsc=false;
+function caveFeed(bytes){
+  for(const b of bytes){
+    if(cEsc){cBuf.push(b);cEsc=false;continue}
+    if(b===0xfe){cEsc=true;continue}
+    if(b===0xff){if(cBuf.length)caveFrame(cBuf);cBuf=[];continue}
+    cBuf.push(b);
+  }
+}
+function caveFrame(f){
+  const sum=f.slice(1).reduce((a,b)=>a+b,0)&255;
+  if(sum!==f[0]||f.length<3){log('trame invalide : '+f.map(b=>b.toString(16).padStart(2,'0')).join(' '));return}
+  const addr=f[1],type=f[2],d=f.slice(3);
+  if(type===0x45&&d.length>=1)caveRowMask(addr,d[0]);
+  else if(type===0x00&&addr>0){K.rowsSeen[addr]=d[0];if(addr>K.nRows){K.nRows=addr;$('sRows').value=addr}saveK();}
+}
+const KDEF={nRows:8,perRow:8,rows:{},slots:{},wines:{},moves:[],rowsSeen:{},model:'claude-sonnet-5-5'};
+let K=Object.assign({},KDEF,store.get('caveasy_state',{}));
+const saveK=()=>{store.set('caveasy_state',K);renderCave()};
+let session=null;const pendingIn={};
+const key=(r,i)=>r+'-'+i;
+function caveRowMask(r,mask){
+  const prev=K.rows[r]||0;K.rows[r]=mask;
+  for(let i=0;i<8;i++){const bit=1<<i,k=key(r,i);
+    if(mask&bit&&!(prev&bit)){ // bouteille posée
+      const w=session?session.wineId:null;
+      if(w)K.slots[k]=w;else if(!K.slots[k])K.slots[k]=null;
+      const mv={t:Date.now(),k,type:'in',w:K.slots[k]};K.moves.unshift(mv);pendingIn[k]=mv;
+      if(session){session.n++;}
+      flash(k);
+    }
+    if(prev&bit&&!(mask&bit)){ // bouteille retirée
+      const p=pendingIn[k];
+      if(p&&Date.now()-p.t<3000){ // effleurement : on annule
+        K.moves=K.moves.filter(m=>m!==p);if(session&&p.w===session.wineId)session.n--;
+      }else K.moves.unshift({t:Date.now(),k,type:'out',w:K.slots[k]??null});
+      delete pendingIn[k];delete K.slots[k];
+    }
+  }
+  if(K.moves.length>2000)K.moves.length=2000;
+  saveK();updSession();
+}
+function flash(k){setTimeout(()=>{const c=document.querySelector(`[data-k="${k}"]`);if(c){c.classList.add('flash');setTimeout(()=>c.classList.remove('flash'),1500)}},50)}
+
+/* ---- fiches vin ---- */
+const F=['nom','domaine','appellation','millesime','couleur','cepages','garde_de','garde_a','accords','description'];
+const readForm=()=>Object.fromEntries(F.map(k=>[k,$('f_'+k).value.trim()]));
+const fillForm=w=>F.forEach(k=>{if(w[k]!==undefined&&w[k]!==null)$('f_'+k).value=Array.isArray(w[k])?w[k].join(', '):w[k]});
+const wineLabel=w=>w?[w.domaine,w.nom,w.millesime].filter(Boolean).join(' · ')||'Vin sans nom':'Non identifié';
+function upsertWine(data,id){
+  id=id||Object.keys(K.wines).find(i=>{const w=K.wines[i];return w.nom===data.nom&&w.domaine===data.domaine&&w.millesime===data.millesime})||('w'+Date.now());
+  K.wines[id]={...(K.wines[id]||{}),...data};return id;
+}
+$('kStart').onclick=()=>{
+  const d=readForm();if(!d.nom&&!d.domaine){alert('Indiquez au moins le vin ou le domaine.');return}
+  const id=upsertWine(d);session={wineId:id,n:0};saveK();
+  $('kStart').classList.add('hide');$('kStop').classList.remove('hide');updSession();
+};
+$('kStop').onclick=()=>{session=null;$('kStart').classList.remove('hide');$('kStop').classList.add('hide');updSession();F.forEach(k=>$('f_'+k).value='')};
+function updSession(){$('kSession').innerHTML=session?`<b>${esc(wineLabel(K.wines[session.wineId]))}</b> : ${session.n} bouteille(s) ajoutée(s) — déposez-les dans le casier`:''}
+
+/* ---- grille ---- */
+let selK=null;
+function renderCave(){
+  if(!$('kGrid'))return;
+  const n=K.nRows,p=K.perRow;let html='',count=0;
+  for(let r=1;r<=n;r++){
+    html+=`<div class="cg" style="grid-template-columns:28px repeat(${p},1fr)"><span class="rl">R${r}</span>`;
+    for(let i=0;i<p;i++){const k=key(r,i),on=(K.rows[r]||0)&(1<<i),w=on?K.wines[K.slots[k]]:null;if(on)count++;
+      html+=`<div class="cell ${on?'on c-'+(w?.couleur||'x'):''}" data-k="${k}" title="${esc(on?wineLabel(w):'vide')}">${on?(w?esc((w.millesime||'').slice(-2)||'•'):'?'):''}</div>`}
+    html+='</div>';
+  }
+  $('kGrid').innerHTML=html;$('kCount').textContent=`· ${count} bouteille(s)`;
+  $('kGrid').querySelectorAll('.cell').forEach(c=>c.onclick=()=>{selK=c.dataset.k;showSlot()});
+  if(selK)showSlot();renderInv();
+}
+function showSlot(){
+  const [r,i]=selK.split('-').map(Number),on=(K.rows[r]||0)&(1<<i),w=K.wines[K.slots[selK]];
+  const opts=Object.entries(K.wines).map(([id,x])=>`<option value="${id}" ${K.slots[selK]===id?'selected':''}>${esc(wineLabel(x))}</option>`).join('');
+  $('kSlot').classList.remove('hide');
+  $('kSlot').innerHTML=`<b>Rangée ${r}, emplacement ${i+1}</b> — ${on?'occupé':'vide'}<br>
+   ${w?`${esc(wineLabel(w))}${w.appellation?' — '+esc(w.appellation):''}${w.garde_de||w.garde_a?`<br>À boire : ${esc(w.garde_de||'?')} → ${esc(w.garde_a||'?')}`:''}${w.accords?`<br>Accords : ${esc(w.accords)}`:''}`:''}
+   <div class="row" style="margin-top:6px"><select id="slotWine" style="flex:1"><option value="">— attribuer un vin —</option>${opts}</select>
+   <button class="b s" id="slotToggle">${on?'Marquer vide':'Marquer occupé'}</button>${w?'<button class="b s" id="slotEdit">Fiche</button>':''}</div>`;
+  $('slotWine').onchange=e=>{const v=e.target.value||null;K.slots[selK]=v;if(v)K.rows[r]=(K.rows[r]||0)|(1<<i);saveK()};
+  $('slotToggle').onclick=()=>{K.rows[r]=(K.rows[r]||0)^(1<<i);if(!(K.rows[r]&(1<<i)))delete K.slots[selK];else if(!(selK in K.slots))K.slots[selK]=null;saveK()};
+  if(w)$('slotEdit').onclick=()=>{fillForm(w);$('kAddCard').scrollIntoView({behavior:'smooth'})};
+}
+
+/* ---- inventaire ---- */
+let invView='cave';
+document.querySelectorAll('[data-inv]').forEach(b=>b.onclick=()=>{invView=b.dataset.inv;renderInv()});
+function renderInv(){
+  const y=new Date().getFullYear(),by={};
+  for(const [k,id] of Object.entries(K.slots)){const [r,i]=k.split('-').map(Number);if(!((K.rows[r]||0)&(1<<i)))continue;(by[id||'?']=by[id||'?']||[]).push(k)}
+  if(invView==='moves'){
+    $('kInv').innerHTML=K.moves.length?'<table>'+K.moves.slice(0,200).map(m=>{const [r,i]=m.k.split('-');return `<tr><td>${new Date(m.t).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})}</td><td>${m.type==='in'?'➕ Entrée':'➖ Sortie'}</td><td>R${r}·${+i+1}</td><td>${esc(wineLabel(K.wines[m.w]))}</td></tr>`}).join('')+'</table>':'Aucun mouvement.';return}
+  let rows=Object.entries(by).map(([id,ks])=>({id,w:K.wines[id],ks}));
+  if(invView==='boire')rows=rows.filter(x=>x.w&&x.w.garde_de&&+x.w.garde_de<=y).sort((a,b)=>(+a.w.garde_a||9999)-(+b.w.garde_a||9999));
+  $('kInv').innerHTML=rows.length?'<table>'+rows.map(({w,ks})=>{const late=w&&w.garde_a&&+w.garde_a<y;
+    return `<tr><td><b>${esc(wineLabel(w))}</b><br>${esc(w?.appellation||'')}${w?.garde_de||w?.garde_a?` · ${esc(w.garde_de||'?')}→${esc(w.garde_a||'?')}`:''}${late?' ⚠️ à boire vite':''}</td><td>${ks.length} 🍾</td><td>${ks.map(k=>{const [r,i]=k.split('-');return 'R'+r+'·'+(+i+1)}).join(' ')}</td></tr>`}).join('')+'</table>':(invView==='boire'?'Aucun vin à boire maintenant (renseignez les années de garde).':'Cave vide.');
+}
+
+/* ---- IA (API Anthropic, clé locale) ---- */
+const AI_PROMPT=`Tu es sommelier. Identifie ce vin et réponds UNIQUEMENT par un objet JSON avec les clés : nom, domaine, appellation, millesime, couleur (rouge|blanc|rosé|effervescent|liquoreux), cepages, garde_de (année à partir de laquelle le boire), garde_a (année limite), accords (texte court), description (2-3 phrases : style, température de service, carafage). Si une information est incertaine, donne ta meilleure estimation ; laisse vide ce que tu ignores.`;
+async function askAI(content){
+  const k=K.apiKey;if(!k){alert('Renseignez votre clé API Anthropic dans Réglages.');return}
+  $('kAiStatus').textContent='Analyse en cours…';
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
+      body:JSON.stringify({model:K.model||KDEF.model,max_tokens:800,messages:[{role:'user',content}]})});
+    const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);
+    const txt=j.content.map(c=>c.text||'').join(''),m=txt.match(/\{[\s\S]*\}/);if(!m)throw new Error('réponse illisible');
+    const w=JSON.parse(m[0]);['millesime','garde_de','garde_a'].forEach(x=>{if(w[x]!=null)w[x]=String(w[x])});fillForm(w);$('kAiStatus').textContent='Fiche remplie ✓ (vérifiez-la)';
+  }catch(e){$('kAiStatus').textContent='Erreur IA : '+e.message}
+}
+function toJpeg(file){return new Promise((ok,ko)=>{const img=new Image();img.onload=()=>{const s=Math.min(1,1280/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',0.85).split(',')[1])};img.onerror=ko;img.src=URL.createObjectURL(file)})}
+$('kPhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;const data=await toJpeg(f);e.target.value='';
+  askAI([{type:'image',source:{type:'base64',media_type:'image/jpeg',data}},{type:'text',text:AI_PROMPT+' Voici la photo de l\'étiquette.'}])};
+$('kAiText').onclick=()=>{const d=readForm();if(!d.nom&&!d.domaine){alert('Saisissez au moins le vin ou le domaine.');return}
+  askAI([{type:'text',text:AI_PROMPT+' Informations connues : '+JSON.stringify(d)}])};
+
+/* ---- réglages / sauvegarde ---- */
+$('sRows').value=K.nRows;$('sSlots').value=K.perRow;$('sKey').value=K.apiKey||'';$('sModel').value=K.model||KDEF.model;
+$('sRows').onchange=e=>{K.nRows=Math.max(1,Math.min(16,+e.target.value||8));saveK()};
+$('sSlots').onchange=e=>{K.perRow=Math.max(1,Math.min(8,+e.target.value||8));saveK()};
+$('sKey').onchange=e=>{K.apiKey=e.target.value.trim();saveK()};
+$('sModel').onchange=e=>{K.model=e.target.value.trim()||KDEF.model;saveK()};
+$('kBackup').onclick=()=>{const {apiKey,...rest}=K;download('caveasy-sauvegarde.json',JSON.stringify(rest,null,1),'application/json')};
+$('kRestore').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());K=Object.assign({},KDEF,d,{apiKey:K.apiKey});saveK()}catch{alert('Fichier invalide')}};
+$('kReset').onclick=()=>{if(confirm('Effacer inventaire, fiches et mouvements ?')){K=Object.assign({},KDEF,{apiKey:K.apiKey,model:K.model});saveK()}};
+renderCave();
 </script>
 </body>
 </html>
