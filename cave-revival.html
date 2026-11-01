@@ -44,6 +44,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
     <h2>Scanner</h2>
     <div class="row">
       <button class="b" id="oConnect">Connecter le scanner</button>
+      <button class="b s" id="oAll">Tous les appareils</button>
       <button class="b s" id="oDisc" disabled>Déconnecter</button>
       <span class="status" id="oStatus">Allumez le scanner (bouton ON/OFF, il doit clignoter).</span>
     </div>
@@ -82,6 +83,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
     <p class="small">Connectez-vous, puis ajoutez/retirez une bouteille à la fois en notant l'emplacement. Les octets qui changent sont surlignés : c'est ce qui révèle le protocole.</p>
     <div class="row">
       <button class="b" id="cConnect">Connecter Caveasy</button>
+      <button class="b s" id="cAll">Tous les appareils</button>
       <button class="b s" id="cDisc" disabled>Déconnecter</button>
       <label class="small"><input type="checkbox" id="cPoll" style="width:auto"> Relire toutes les 2 s</label>
     </div>
@@ -110,6 +112,13 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 if(!navigator.bluetooth) $('nobt').classList.remove('hide');
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));['oeno','cave'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.tab))});
 
+/* Sélecteur filtré (nom annoncé ou service) ; repli « tous les appareils » */
+const NAMES_OENO=['MyOeno','MYOENO','myoeno','Myoeno','MyOneo','Oeno','OENO','oeno','Scanner'];
+const NAMES_CAVE=['CAVEASY','Caveasy','caveasy','CavEasy'];
+function pick(all,names,services,optional){
+  if(all)return navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:optional});
+  return navigator.bluetooth.requestDevice({filters:[...names.map(n=>({namePrefix:n})),...services.map(u=>({services:[u]}))],optionalServices:optional});
+}
 /* ---------- MyOeno : algorithme d'origine (ComputeKt.computeData, app 2.3), vérifié à l'identique ---------- */
 function myoenoCompute(d){
   const c1=v=>v>1?1:v;
@@ -137,9 +146,9 @@ const SVC_SCAN='f92158cd-26d2-4afc-8746-44bc9d7cc527',CH_SCAN='e5042891-e937-48c
 const STATES={1:['ok',"Vous pouvez plonger la pointe du Scanner dans votre verre de vin."],2:['warn',"Lumière ambiante trop intense : mettez-vous à l'abri de la lumière."],3:['warn',"Lumière trop instable : mettez-vous à l'abri de la lumière."],4:['ok',"Le scan est en cours…"]};
 let oDev=null,oState=-1,lastMeasure=null;
 function oMsg(cls,t){$('oMsg').innerHTML=`<div class="msg ${cls}">${esc(t)}</div>`}
-$('oConnect').onclick=async()=>{
+const oConnect=async(all)=>{
   try{
-    oDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SVC_BAT,SVC_SCAN]});
+    oDev=await pick(all,NAMES_OENO,[SVC_SCAN],[SVC_BAT,SVC_SCAN]);
     oDev.addEventListener('gattserverdisconnected',()=>{$('oStatus').textContent='Déconnecté.';$('oDisc').disabled=true;$('oConnect').disabled=false});
     $('oStatus').textContent='Connexion à '+(oDev.name||'appareil')+'…';
     const srv=await oDev.gatt.connect();
@@ -154,6 +163,7 @@ $('oConnect').onclick=async()=>{
     oMsg('ok','Scanner prêt. Placez-vous à l\'abri d\'une lumière directe.');
   }catch(e){$('oStatus').textContent='Erreur : '+e.message}
 };
+$('oConnect').onclick=()=>oConnect(false);$('oAll').onclick=()=>oConnect(true);
 $('oDisc').onclick=()=>oDev?.gatt.connected&&oDev.gatt.disconnect();
 function onScan(dv){
   if(dv.byteLength<12)return;
@@ -205,9 +215,9 @@ function onVal(c,dv,src){
   if(prev!==h){log(`${src} ${id.slice(4,8)} : ${h}${prev!==undefined?'   (avant : '+prev+')':''}`)}
   last[id]=h;
 }
-$('cConnect').onclick=async()=>{
+const cConnect=async(all)=>{
   try{
-    cDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[CAVE_SVC,0x180a,0x180f]});
+    cDev=await pick(all,NAMES_CAVE,[CAVE_SVC],[CAVE_SVC,0x180a,0x180f]);
     cDev.addEventListener('gattserverdisconnected',()=>{$('cStatus').textContent='Déconnecté.';log('--- déconnecté');$('cDisc').disabled=true;$('cConnect').disabled=false;clearInterval(pollT)});
     const srv=await cDev.gatt.connect();log(`--- connecté à ${cDev.name||'?'} (${cDev.id})`);
     $('cConnect').disabled=true;$('cDisc').disabled=false;
@@ -228,6 +238,7 @@ $('cConnect').onclick=async()=>{
     setPoll();
   }catch(e){$('cStatus').textContent='Erreur : '+e.message}
 };
+$('cConnect').onclick=()=>cConnect(false);$('cAll').onclick=()=>cConnect(true);
 async function pollOnce(){for(const c of cChars)if(c.properties.read)try{onVal(c,await c.readValue(),'LU ')}catch{}}
 function setPoll(){clearInterval(pollT);if($('cPoll').checked&&cDev?.gatt.connected)pollT=setInterval(pollOnce,2000)}
 $('cPoll').onchange=setPoll;
