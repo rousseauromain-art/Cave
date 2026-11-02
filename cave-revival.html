@@ -35,7 +35,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
 </head>
 <body>
 <header><h1>Cave Revival</h1><p>Pilote libre pour le scanner MyOeno et le casier Caveasy</p></header>
-<nav><button data-tab="oeno" class="on">Scanner MyOeno</button><button data-tab="cave">Casier Caveasy</button></nav>
+<nav><button data-tab="oeno" class="on">Scanner MyOeno</button><button data-tab="cave">Casier Caveasy</button><button data-tab="diag">Diagnostic</button></nav>
 <main>
 <div id="nobt" class="card hide"><b>Web Bluetooth indisponible.</b> Ouvrez cette page dans Chrome (Android ou PC), servie en HTTPS (ex. GitHub Pages).</div>
 
@@ -94,7 +94,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
     <h2>Ranger des bouteilles</h2>
     <p class="small">Identifiez le vin (photo de l'étiquette ou saisie), lancez le rangement, puis déposez les bouteilles : elles lui sont attribuées automatiquement.</p>
     <div class="row" style="margin-bottom:8px">
-      <label class="b s" style="cursor:pointer">📷 Photo étiquette<input type="file" id="kPhoto" accept="image/*" capture="environment" class="hide"></label>
+      <label class="b s" style="cursor:pointer">📷 Prendre une photo<input type="file" id="kPhoto" accept="image/*" capture="environment" class="hide"></label>
+      <label class="b s" style="cursor:pointer">🖼 Importer une photo<input type="file" id="kPhotoGal" accept="image/*" class="hide"></label>
       <button class="b s" id="kAiText">✨ Compléter la fiche</button>
       <span class="small" id="kAiStatus"></span>
     </div>
@@ -136,11 +137,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
     </div>
     <label class="small" style="display:block;margin-top:8px"><input type="checkbox" id="sBottom" style="width:auto"> Rangée 1 en bas du casier</label>
     <label class="small" style="display:block"><input type="checkbox" id="sRight" style="width:auto"> Emplacement 1 à droite</label>
-    <label class="small" style="display:block;margin-top:8px">Fournisseur IA<select id="sProv"><option value="anthropic">Anthropic (Claude)</option><option value="gemini">Google (Gemini)</option></select></label>
+    <label class="small" style="display:block;margin-top:8px">Fournisseur IA<select id="sProv"><option value="local">Lecture locale (gratuite, sans clé)</option><option value="ocrspace">OCR.space (gratuit, 25 000/mois)</option><option value="anthropic">Anthropic (Claude)</option><option value="gemini">Google (Gemini)</option></select></label>
     <label class="small p-anth" style="display:block;margin-top:8px">Clé API Anthropic (stockée uniquement sur ce téléphone)<input id="sKey" type="password" placeholder="sk-ant-…" autocomplete="off"></label>
     <label class="small p-anth" style="display:block;margin-top:8px">Modèle Claude<input id="sModel"></label>
     <label class="small p-gem" style="display:block;margin-top:8px">Clé API Gemini (stockée uniquement sur ce téléphone)<input id="sGKey" type="password" placeholder="AIza…" autocomplete="off"></label>
     <label class="small p-gem" style="display:block;margin-top:8px">Modèle Gemini<input id="sGModel"></label>
+    <label class="small" style="display:block;margin-top:8px">Clé OCR.space (gratuite sur ocr.space/ocrapi ; vide = clé de démonstration)<input id="sOKey" type="password" placeholder="K8…" autocomplete="off"></label>
     <div class="row" style="margin-top:8px"><button class="b s" id="kBackup">Sauvegarde JSON</button><label class="b s" style="cursor:pointer">Restaurer<input type="file" id="kRestore" accept=".json" class="hide"></label><button class="b s" id="kReset">Réinitialiser la cave</button></div>
   </div>
 
@@ -169,6 +171,31 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
   </div>
   </details>
 </section>
+
+<section id="tab-diag" class="hide">
+  <div class="card">
+    <h2>État de l'application <span class="small" id="dVer"></span></h2>
+    <div id="dEnv" class="small"></div>
+    <div class="row" style="margin-top:8px"><button class="b s" id="dRefresh">Actualiser</button></div>
+  </div>
+  <div class="card">
+    <h2>Tests</h2>
+    <p class="small">Chaque test affiche son résultat ci-dessous et dans le journal.</p>
+    <div class="row">
+      <button class="b s" id="dGem">Tester Gemini</button>
+      <button class="b s" id="dGemList">Modèles Gemini disponibles</button>
+      <button class="b s" id="dClaude">Tester Claude</button>
+      <button class="b s" id="dOcrSpace">Tester OCR.space</button>
+      <button class="b s" id="dOcr">Tester la lecture locale</button>
+    </div>
+    <div id="dOut" class="msg mono small" style="white-space:pre-wrap">—</div>
+  </div>
+  <div class="card">
+    <h2>Journal de diagnostic</h2>
+    <div class="log mono" id="dLog"></div>
+    <div class="row" style="margin-top:8px"><button class="b s" id="dExport">Exporter</button><button class="b s" id="dClear">Vider</button></div>
+  </div>
+</section>
 </main>
 
 <script>
@@ -179,7 +206,7 @@ const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{re
 const download=(name,text,type='text/plain')=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 if(!navigator.bluetooth) $('nobt').classList.remove('hide');
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));['oeno','cave'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.tab))});
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));['oeno','cave','diag'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.tab))});
 
 /* Sélecteur filtré (nom annoncé ou service) ; repli « tous les appareils » */
 const NAMES_OENO=['MyOeno','MYOENO','myoeno','Myoeno','MyOneo','Oeno','OENO','oeno','Scanner'];
@@ -230,7 +257,7 @@ const oConnect=async(all)=>{
     ch.addEventListener('characteristicvaluechanged',e=>onScan(e.target.value));
     await ch.startNotifications();
     oMsg('ok','Scanner prêt. Placez-vous à l\'abri d\'une lumière directe.');
-  }catch(e){$('oStatus').textContent='Erreur : '+e.message}
+  }catch(e){$('oStatus').textContent='Erreur : '+e.message;dlog('MyOeno connexion : '+e.message,'err')}
 };
 $('oConnect').onclick=()=>oConnect(false);$('oAll').onclick=()=>oConnect(true);
 $('oDisc').onclick=()=>oDev?.gatt.connected&&oDev.gatt.disconnect();
@@ -306,7 +333,7 @@ const cConnect=async(all)=>{
       if(c.properties.notify||c.properties.indicate){c.addEventListener('characteristicvaluechanged',e=>onVal(c,e.target.value,'NOTIF'));try{await c.startNotifications();log(`abonné ${c.uuid.slice(4,8)}`)}catch(e){log(`abonnement ${c.uuid.slice(4,8)} refusé`)}}
     }
     setPoll();txChars();
-  }catch(e){$('cStatus').textContent='Erreur : '+e.message}
+  }catch(e){$('cStatus').textContent='Erreur : '+e.message;dlog('Caveasy connexion : '+e.message,'err')}
 };
 $('cConnect').onclick=()=>cConnect(false);$('cAll').onclick=()=>cConnect(true);
 async function pollOnce(){for(const c of cChars)if(c.properties.read)try{onVal(c,await c.readValue(),'LU ')}catch{}}
@@ -335,14 +362,15 @@ function caveFeed(bytes){
 }
 function caveFrame(f){
   const sum=f.slice(1).reduce((a,b)=>a+b,0)&255;
-  if(sum!==f[0]||f.length<3){log('trame invalide : '+f.map(b=>b.toString(16).padStart(2,'0')).join(' '));return}
-  const addr=f[1],type=f[2],d=f.slice(3);
+  if(sum!==f[0]||f.length<3){DSTAT.bad++;log('trame invalide : '+f.map(b=>b.toString(16).padStart(2,'0')).join(' '));return}
+  DSTAT.ok++;DSTAT.last=Date.now();const addr=f[1],type=f[2],d=f.slice(3);
   if(type===0x45&&d.length>=1)caveRowMask(addr,d[0]);
   else if(type===0x00&&addr>0){K.rowsSeen[addr]=d[0];if(addr>K.nRows){K.nRows=addr;$('sRows').value=addr}saveK();}
 }
-const KDEF={ver:2,provider:'anthropic',bottomFirst:true,rightFirst:false,nRows:8,perRow:6,rows:{},slots:{},wines:{},moves:[],rowsSeen:{},model:'claude-sonnet-5-5'};
+const KDEF={ver:2,provider:'ocrspace',bottomFirst:true,rightFirst:false,nRows:8,perRow:6,rows:{},slots:{},wines:{},moves:[],rowsSeen:{},model:'claude-sonnet-5-5'};
 let K=Object.assign({},KDEF,store.get('caveasy_state',{}));
 if(!K.ver||K.ver<2){K.ver=2;K.perRow=6;K.bottomFirst=true;}
+if(K.geminiModel==='gemini-2.5-flash')K.geminiModel='gemini-3.8-flash';
 const saveK=()=>{store.set('caveasy_state',K);renderCave()};
 let session=null;const pendingIn={};
 const key=(r,i)=>r+'-'+i;
@@ -409,14 +437,14 @@ function showSlot(){
   const opts=Object.entries(K.wines).map(([id,x])=>`<option value="${id}" ${K.slots[selK]===id?'selected':''}>${esc(wineLabel(x))}</option>`).join('');
   $('kSlot').classList.remove('hide');
   $('kSlot').innerHTML=`<b>Rangée ${r}, emplacement ${i+1}</b> — ${on?'occupé':'vide'}<br>
-   ${w&&w.photo?`<img src="${w.photo}" alt="" style="float:right;max-height:90px;border-radius:6px;margin-left:8px">`:''}${on&&!w?`<div class="row" style="margin:6px 0"><label class="b" style="cursor:pointer">📷 Identifier cette bouteille<input type="file" id="slotPhoto" accept="image/*" capture="environment" class="hide"></label><span class="small" id="slotAi"></span></div>`:''}${w?`${esc(wineLabel(w))}${w.appellation?' — '+esc(w.appellation):''}${w.garde_de||w.garde_a?`<br>À boire : ${esc(w.garde_de||'?')} → ${esc(w.garde_a||'?')}`:''}${w.accords?`<br>Accords : ${esc(w.accords)}`:''}${curveSVG(w)}`:''}
+   ${w&&w.photo?`<img src="${w.photo}" alt="" style="float:right;max-height:90px;border-radius:6px;margin-left:8px">`:''}${on&&!w?`<div class="row" style="margin:6px 0"><label class="b" style="cursor:pointer">📷 Photo<input type="file" id="slotPhoto" accept="image/*" capture="environment" class="hide"></label><label class="b s" style="cursor:pointer">🖼 Importer<input type="file" id="slotPhotoGal" accept="image/*" class="hide"></label><span class="small" id="slotAi"></span></div>`:''}${w?`${esc(wineLabel(w))}${w.appellation?' — '+esc(w.appellation):''}${w.garde_de||w.garde_a?`<br>À boire : ${esc(w.garde_de||'?')} → ${esc(w.garde_a||'?')}`:''}${w.accords?`<br>Accords : ${esc(w.accords)}`:''}${curveSVG(w)}`:''}
    <div class="row" style="margin-top:6px"><select id="slotWine" style="flex:1"><option value="">— attribuer un vin —</option>${opts}</select>
    <button class="b s" id="slotToggle">${on?'Marquer vide':'Marquer occupé'}</button>${w?'<button class="b s" id="slotEdit">Fiche</button>':''}</div>`;
   $('slotWine').onchange=e=>{const v=e.target.value||null;K.slots[selK]=v;if(v)K.rows[r]=(K.rows[r]||0)|(1<<i);saveK()};
   $('slotToggle').onclick=()=>{K.rows[r]=(K.rows[r]||0)^(1<<i);if(!(K.rows[r]&(1<<i)))delete K.slots[selK];else if(!(selK in K.slots))K.slots[selK]=null;saveK()};
-  if($('slotPhoto'))$('slotPhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;const k=selK;$('slotAi').textContent='Analyse…';
-    try{const [img,photo]=await Promise.all([toJpeg(f,1024,0.8),toJpeg(f,240,0.6)]);const wd=await askAI(img,null);
-      const id=upsertWine({...wd,photo:'data:image/jpeg;base64,'+photo});K.slots[k]=id;const mv=K.moves.find(m=>m.k===k&&m.type==='in');if(mv&&!mv.w)mv.w=id;saveK();}
+  if($('slotPhoto'))$('slotPhotoGal').onchange=$('slotPhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;const k=selK;$('slotAi').textContent='Analyse…';
+    try{const [img,photo]=await Promise.all([toJpeg(f,1600,0.85),toJpeg(f,240,0.6)]);const wd=await identify(img,m=>$('slotAi').textContent=m);
+      const id=upsertWine({...wd,_src:undefined,photo:'data:image/jpeg;base64,'+photo});K.slots[k]=id;const mv=K.moves.find(m=>m.k===k&&m.type==='in');if(mv&&!mv.w)mv.w=id;saveK();}
     catch(err){$('slotAi').textContent='Erreur : '+err.message}};
   if(w)$('slotEdit').onclick=()=>{fillForm(w);$('kAddCard').scrollIntoView({behavior:'smooth'})};
 }
@@ -437,12 +465,13 @@ function renderInv(){
 
 /* ---- IA (API Anthropic, clé locale) ---- */
 const AI_PROMPT=`Tu es sommelier. Identifie ce vin et réponds UNIQUEMENT par un objet JSON avec les clés : nom, domaine, appellation, millesime, couleur (rouge|blanc|rosé|effervescent|liquoreux), cepages, garde_de (année à partir de laquelle le boire), garde_a (année limite), accords (texte court), description (2-3 phrases : style, température de service, carafage). Si une information est incertaine, donne ta meilleure estimation ; laisse vide ce que tu ignores.`;
-async function askAI(imageB64,known){
-  const k=K.provider==='gemini'?K.geminiKey:K.apiKey;if(!k)throw new Error('clé API manquante (Réglages)');
+async function askAI(imageB64,known,prov){
+  prov=prov||(K.provider==='gemini'||(!K.apiKey&&K.geminiKey)?'gemini':'anthropic');
+  const k=prov==='gemini'?K.geminiKey:K.apiKey;if(!k)throw new Error('clé API manquante (Réglages)');
   const prompt=AI_PROMPT+(imageB64?' Voici la photo de l\'étiquette.':'')+(known?' Informations connues : '+JSON.stringify(known):'');
   let txt;
-  if(K.provider==='gemini'){
-    const model=K.geminiModel||'gemini-2.5-flash';
+  if(prov==='gemini'){
+    const model=K.geminiModel||'gemini-3.8-flash';
     const parts=[{text:prompt}];if(imageB64)parts.unshift({inline_data:{mime_type:'image/jpeg',data:imageB64}});
     const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':k},
       body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json'}})});
@@ -462,25 +491,26 @@ async function askAI(imageB64,known){
 }
 function toJpeg(file,max=1024,q=0.8){return new Promise((ok,ko)=>{const img=new Image();img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(img.src);ok(c.toDataURL('image/jpeg',q).split(',')[1])};img.onerror=ko;img.src=URL.createObjectURL(file)})}
 let formPhoto=null;
-$('kPhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;e.target.value='';$('kAiStatus').textContent='Analyse en cours…';
-  try{const [img,photo]=await Promise.all([toJpeg(f,1024,0.8),toJpeg(f,240,0.6)]);formPhoto='data:image/jpeg;base64,'+photo;fillForm(await askAI(img,null));$('kAiStatus').textContent='Fiche remplie ✓ (vérifiez-la)'}
+$('kPhotoGal').onchange=$('kPhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;e.target.value='';$('kAiStatus').textContent='Analyse en cours…';
+  try{const [img,photo]=await Promise.all([toJpeg(f,1600,0.85),toJpeg(f,240,0.6)]);formPhoto='data:image/jpeg;base64,'+photo;const wd=await identify(img,m=>$('kAiStatus').textContent=m);fillForm(wd);$('kAiStatus').textContent=(wd._src||'Fiche remplie')+' ✓ — vérifiez-la'}
   catch(err){$('kAiStatus').textContent='Erreur IA : '+err.message}};
 $('kAiText').onclick=async()=>{const d=readForm();if(!d.nom&&!d.domaine){alert('Saisissez au moins le vin ou le domaine.');return}
   $('kAiStatus').textContent='Analyse en cours…';try{fillForm(await askAI(null,d));$('kAiStatus').textContent='Fiche complétée ✓'}catch(err){$('kAiStatus').textContent='Erreur IA : '+err.message}};
 /* ---- réglages / sauvegarde ---- */
-$('sBottom').checked=K.bottomFirst;$('sRight').checked=K.rightFirst;$('sProv').value=K.provider;$('sGKey').value=K.geminiKey||'';$('sGModel').value=K.geminiModel||'gemini-2.5-flash';provUI();
+$('sBottom').checked=K.bottomFirst;$('sRight').checked=K.rightFirst;$('sProv').value=K.provider;$('sGKey').value=K.geminiKey||'';$('sGModel').value=K.geminiModel||'gemini-3.8-flash';provUI();
 $('sRows').value=K.nRows;$('sSlots').value=K.perRow;$('sKey').value=K.apiKey||'';$('sModel').value=K.model||KDEF.model;
 $('sRows').onchange=e=>{K.nRows=Math.max(1,Math.min(16,+e.target.value||8));saveK()};
 $('sSlots').onchange=e=>{K.perRow=Math.max(1,Math.min(8,+e.target.value||8));saveK()};
-function provUI(){document.querySelectorAll('.p-anth').forEach(e=>e.classList.toggle('hide',K.provider!=='anthropic'));document.querySelectorAll('.p-gem').forEach(e=>e.classList.toggle('hide',K.provider!=='gemini'))}
+function provUI(){return;document.querySelectorAll('.p-anth').forEach(e=>e.classList.toggle('hide',K.provider!=='anthropic'));document.querySelectorAll('.p-gem').forEach(e=>e.classList.toggle('hide',K.provider!=='gemini'))}
 $('sProv').onchange=e=>{K.provider=e.target.value;provUI();saveK()};
 $('sGKey').onchange=e=>{K.geminiKey=e.target.value.trim();saveK()};
 $('sGModel').onchange=e=>{K.geminiModel=e.target.value.trim();saveK()};
+$('sOKey').value=K.ocrKey||'';$('sOKey').onchange=e=>{K.ocrKey=e.target.value.trim();saveK()};
 $('sBottom').onchange=e=>{K.bottomFirst=e.target.checked;saveK()};
 $('sRight').onchange=e=>{K.rightFirst=e.target.checked;saveK()};
 $('sKey').onchange=e=>{K.apiKey=e.target.value.trim();saveK()};
 $('sModel').onchange=e=>{K.model=e.target.value.trim()||KDEF.model;saveK()};
-$('kBackup').onclick=()=>{const {apiKey,geminiKey,...rest}=K;download('caveasy-sauvegarde.json',JSON.stringify(rest,null,1),'application/json')};
+$('kBackup').onclick=()=>{const {apiKey,geminiKey,ocrKey,...rest}=K;download('caveasy-sauvegarde.json',JSON.stringify(rest,null,1),'application/json')};
 $('kRestore').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());K=Object.assign({},KDEF,d,{apiKey:K.apiKey,geminiKey:K.geminiKey});saveK()}catch{alert('Fichier invalide')}};
 $('kReset').onclick=()=>{if(confirm('Effacer inventaire, fiches et mouvements ?')){K=Object.assign({},KDEF,{apiKey:K.apiKey,model:K.model,geminiKey:K.geminiKey,geminiModel:K.geminiModel,provider:K.provider});saveK()}};
 renderCave();
@@ -525,6 +555,116 @@ function curveSVG(w){const a=apoWindow(w);if(!a)return '';
    <text x="${(X(a.to)+X(end))/2}" y="${H-B+12}" font-size="9" text-anchor="middle" fill="var(--mute)">Déclin</text>
    <text x="${X(y0)}" y="${H-2}" font-size="9" fill="var(--mute)">${y0}</text><text x="${X(end)}" y="${H-2}" font-size="9" text-anchor="end" fill="var(--mute)">${end}</text></svg>
    <div class="small">Source : ${esc(a.src)}</div>`}
+
+/* ---- identification : IA si clé, sinon lecture locale (Tesseract.js) ---- */
+let tessP=null;
+function loadTess(){return tessP||(tessP=new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';s.onload=()=>ok(window.Tesseract);s.onerror=()=>{tessP=null;ko(new Error('chargement du lecteur impossible (réseau ?)'))};document.head.appendChild(s)}))}
+function prepOCR(b64){return new Promise(ok=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.filter='grayscale(1) contrast(1.5)';x.drawImage(im,0,0);ok(c)};im.src='data:image/jpeg;base64,'+b64})}
+async function ocrLabel(b64,status){
+  status&&status('Lecture de l\'étiquette… (1er usage : téléchargement ~10 Mo)');
+  const T=await loadTess();
+  const r=await T.recognize(await prepOCR(b64),'fra',{logger:m=>{if(m.status==='recognizing text'&&status)status('Lecture… '+Math.round(m.progress*100)+' %')}});
+  return parseLabel(r.data);
+}
+function parseLabel(data){
+  const all=(data.lines||[]).map(l=>({t:l.text.replace(/\s+/g,' ').trim(),h:l.bbox.y1-l.bbox.y0,c:l.confidence}));
+  const lines=all.filter(l=>l.t.replace(/[^A-Za-zÀ-ÿ]/g,'').length>=3&&l.c>35);
+  const raw=all.map(l=>l.t).join(' '),y=new Date().getFullYear();
+  const years=(raw.match(/(19[5-9]\d|20[0-4]\d)/g)||[]).map(Number).filter(v=>v<=y);
+  // appellation : correspondance par mots, le dernier mot pouvant être tronqué (« CÔTES DU RH »)
+  const toks=norm(raw).split(' ').filter(Boolean);let best=null,bs=0;
+  for(const o of APO_IDX){const at=o.last.split(' ');if(o.last.length<4)continue;
+    for(let i=0;i<toks.length;i++){let m=0,chars=0;for(let j=0;j<at.length&&i+j<toks.length;j++){const a=at[j],t=toks[i+j];
+        if(t===a){m++;chars+=a.length}else if(j>0&&t.length>=2&&a.startsWith(t)){m++;chars+=t.length;break}else break}
+      const sc=chars+(m===at.length?3:0);if(m>=Math.min(2,at.length)&&sc>bs){bs=sc;best=o}}}
+  const app=best&&bs>=6?best.k.split(' > ').at(-1):'';
+  const col=/\bros[eé]\b/i.test(raw)?'rosé':/\b(brut|cr[eé]mant|champagne|p[eé]tillant|mousseux|cava|prosecco)\b/i.test(raw)?'effervescent':/\b(moelleux|liquoreux|sauternes|doux)\b/i.test(raw)?'liquoreux':/\bblanc\b/i.test(raw)?'blanc':/\brouge\b/i.test(raw)?'rouge':'';
+  const isNoise=t=>/mis en bouteille|appellation|contr[oô]l[eé]e|prot[eé]g[eé]e|\bcl\b|% ?vol|produit de|product of|contient|sulfites|^\d|c[oô]tes du|france/i.test(t);
+  const di=lines.findIndex(l=>/\b(domaine|ch[aâ]teau|clos|mas|vignobles?|maison|cellier)\b/i.test(l.t));
+  let dom=di>=0?lines[di].t:'';if(dom&&/^(domaine|ch[aâ]teau)( d[eu]s?)?$/i.test(dom)&&lines[di+1])dom+=' '+lines[di+1].t;
+  const cand=lines.filter((l,i)=>i!==di&&!isNoise(l.t)&&l.t.length>=4&&l.c>50).sort((a,b)=>b.h-a.h);
+  return {nom:(cand[0]||{}).t||'',domaine:dom,appellation:app,millesime:years.length?String(years[0]):'',couleur:col,_src:'Lecture locale (partielle)'};
+}
+function shrinkB64(b64,maxBytes){return new Promise(ok=>{const kb=()=>Math.round(b64.length*0.75);if(kb()<=maxBytes)return ok(b64);
+  const im=new Image();im.onload=async()=>{let w=im.width,h=im.height,q=0.8,out=b64;
+    for(let i=0;i<8&&out.length*0.75>maxBytes;i++){const c=document.createElement('canvas');c.width=Math.round(w);c.height=Math.round(h);c.getContext('2d').drawImage(im,0,0,c.width,c.height);out=c.toDataURL('image/jpeg',q).split(',')[1];q=Math.max(0.5,q-0.1);w*=0.85;h*=0.85}
+    ok(out)};im.src='data:image/jpeg;base64,'+b64})}
+async function ocrSpace(b64,status){
+  status&&status('Lecture OCR.space…');
+  const before=Math.round(b64.length*0.75/1024);b64=await shrinkB64(b64,700*1024);dlog(`OCR.space : image ${before} Ko → ${Math.round(b64.length*0.75/1024)} Ko envoyés (limite gratuite 1 Mo)`);
+  const fd=new FormData();fd.append('apikey',K.ocrKey||'helloworld');fd.append('base64Image','data:image/jpeg;base64,'+b64);
+  fd.append('OCREngine','2');fd.append('scale','true');fd.append('detectOrientation','true');fd.append('isOverlayRequired','true');
+  const r=await fetch('https://api.ocr.space/parse/image',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));
+  if(!r.ok||j.IsErroredOnProcessing||!j.ParsedResults)throw new Error('OCR.space '+r.status+' '+[].concat(j.ErrorMessage||j.ErrorDetails||'').join(' ').slice(0,200));
+  const lines=[];for(const p of j.ParsedResults)for(const L of (p.TextOverlay&&p.TextOverlay.Lines)||[]){const ws=L.Words||[];if(!ws.length)continue;
+    const y0=Math.min(...ws.map(w=>w.Top)),y1=Math.max(...ws.map(w=>w.Top+w.Height));lines.push({text:ws.map(w=>w.WordText).join(' '),bbox:{y0,y1},confidence:90})}
+  if(!lines.length)for(const p of j.ParsedResults)for(const t of (p.ParsedText||'').split(/\r?\n/))if(t.trim())lines.push({text:t,bbox:{y0:0,y1:20},confidence:90});
+  dlog('OCR.space a lu : '+lines.map(l=>l.text).join(' | ').slice(0,300));
+  const w=parseLabel({lines});w._src='OCR.space';return w;
+}
+async function identify(b64,status){
+  const st0=status;status=m=>{dlog('Identification : '+m);st0&&st0(m)};dlog('Photo reçue ('+Math.round(b64.length*0.75/1024)+' Ko après compression)');
+  const prov=K.provider==='gemini'&&K.geminiKey?'gemini':K.provider==='anthropic'&&K.apiKey?'anthropic':null;
+  if(prov){try{status('Analyse IA ('+(prov==='gemini'?'Gemini':'Claude')+')…');const w=await askAI(b64,null,prov);w._src=prov==='gemini'?'Gemini':'Claude';return w}
+    catch(e){dlog('IA ('+prov+') en échec : '+e.message,'err');status('IA indisponible, essai OCR.space…')}}
+  if(K.provider!=='local'){try{return await ocrSpace(b64,status)}catch(e){dlog('OCR.space en échec : '+e.message,'err');status('OCR.space indisponible ('+e.message+'), lecture locale…')}}
+  return ocrLabel(b64,status);
+}
+
+/* ---- diagnostic ---- */
+const APP_VERSION='v8.1 (2026-11-02)';
+const DSTAT={ok:0,bad:0,last:0};
+let DLOG=store.get('diag_log',[]);
+function dlog(msg,lvl='info'){const line=`${new Date().toLocaleString('fr-FR')} [${lvl}] ${msg}`;DLOG.push(line);if(DLOG.length>500)DLOG.shift();store.set('diag_log',DLOG);if($('dLog')){$('dLog').innerHTML=DLOG.slice(-200).map(esc).join('<br>');$('dLog').scrollTop=1e9}}
+window.addEventListener('error',e=>dlog('Erreur JS : '+e.message+' ('+(e.filename||'').split('/').pop()+':'+e.lineno+')','err'));
+window.addEventListener('unhandledrejection',e=>dlog('Promesse rejetée : '+(e.reason&&e.reason.message||e.reason),'err'));
+const mask=k=>k?('…'+k.slice(-4)+' ('+k.length+' car.)'):'absente';
+async function envInfo(){
+  let ls='OK';try{localStorage.setItem('_t','1');localStorage.removeItem('_t')}catch(e){ls='indisponible : '+e.message}
+  let used='?';try{let n=0;for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);n+=(localStorage.getItem(k)||'').length}used=Math.round(n/1024)+' Ko'}catch{}
+  let bt='absent';if(navigator.bluetooth){bt='présent';try{bt+=(await navigator.bluetooth.getAvailability())?', adaptateur disponible':', adaptateur indisponible'}catch{}}
+  const prov=K.provider==='gemini'&&K.geminiKey?'Gemini':K.provider==='anthropic'&&K.apiKey?'Claude':K.provider==='local'?'lecture locale':'OCR.space puis lecture locale';
+  const rows=[['Contexte sécurisé (HTTPS)',window.isSecureContext?'oui':'NON — Bluetooth et caméra bloqués'],['Web Bluetooth',bt],['Stockage local',ls+' · '+used+' utilisés'],
+   ['Navigateur',navigator.userAgent.replace(/^Mozilla\/5.0 /,'')],['Fournisseur choisi',K.provider],['Identification utilisée',prov],
+   ['Clé Gemini',mask(K.geminiKey)],['Modèle Gemini',K.geminiModel||'gemini-3.8-flash'],['Clé Anthropic',mask(K.apiKey)],['Clé OCR.space',K.ocrKey?mask(K.ocrKey):'démonstration (limitée)'],['Modèle Claude',K.model||KDEF.model],
+   ['Lecteur local (Tesseract)',window.Tesseract?'chargé':'non chargé (se charge au 1er usage)'],
+   ['Casier connecté',cDev&&cDev.gatt.connected?'oui ('+(cDev.name||'?')+')':'non'],['Trames casier valides / invalides',DSTAT.ok+' / '+DSTAT.bad+(DSTAT.last?' · dernière '+new Date(DSTAT.last).toLocaleTimeString('fr-FR'):'')],
+   ['Scanner MyOeno connecté',oDev&&oDev.gatt.connected?'oui':'non'],
+   ['Cave',Object.keys(K.wines).length+' vins · '+Object.values(K.rows).reduce((a,m)=>a+m.toString(2).split('1').length-1,0)+' bouteilles · '+K.moves.length+' mouvements'+(K.conservation?' · '+K.conservation.length+' relevés T°/H':'')]];
+  $('dVer').textContent='· '+APP_VERSION;
+  $('dEnv').innerHTML='<table>'+rows.map(([a,b])=>`<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join('')+'</table>';
+}
+function dOut(t){$('dOut').textContent=t;dlog(t.split('\n')[0])}
+async function timed(fn){const t0=performance.now();try{const r=await fn();return [r,Math.round(performance.now()-t0)]}catch(e){e.ms=Math.round(performance.now()-t0);throw e}}
+$('dGem').onclick=async()=>{if(!K.geminiKey)return dOut('Gemini : aucune clé enregistrée (Casier > Réglages).');dOut('Gemini : requête en cours…');
+  const model=K.geminiModel||'gemini-3.8-flash';
+  try{const [r,ms]=await timed(()=>fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':K.geminiKey},body:JSON.stringify({contents:[{role:'user',parts:[{text:'Réponds uniquement : OK'}]}]})}));
+    const j=await r.json().catch(()=>({}));
+    dOut(r.ok?`Gemini OK (${ms} ms) · modèle ${model}\nRéponse : ${(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text).join('').trim()}`:`Gemini ÉCHEC HTTP ${r.status} (${ms} ms) · modèle ${model}\n${j.error?.status||''} ${j.error?.message||JSON.stringify(j).slice(0,300)}`)}
+  catch(e){dOut('Gemini : erreur réseau ('+e.message+') — connexion, bloqueur ou CORS')}};
+$('dGemList').onclick=async()=>{if(!K.geminiKey)return dOut('Gemini : aucune clé enregistrée.');dOut('Liste des modèles…');
+  try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':K.geminiKey}});const j=await r.json();
+    if(!r.ok)return dOut(`Liste ÉCHEC HTTP ${r.status}\n${j.error?.message||''}`);
+    const ms=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace('models/',''));
+    dOut(`${ms.length} modèles utilisables (copiez-en un dans Réglages > Modèle Gemini) :\n`+ms.filter(n=>/flash|pro/.test(n)).join('\n'))}catch(e){dOut('Liste : erreur réseau ('+e.message+')')}};
+$('dClaude').onclick=async()=>{if(!K.apiKey)return dOut('Claude : aucune clé enregistrée.');dOut('Claude : requête en cours…');const model=K.model||KDEF.model;
+  try{const [r,ms]=await timed(()=>fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':K.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:'Réponds uniquement : OK'}]})}));
+    const j=await r.json().catch(()=>({}));
+    dOut(r.ok?`Claude OK (${ms} ms) · modèle ${model}\nRéponse : ${(j.content||[]).map(c=>c.text).join('')}`:`Claude ÉCHEC HTTP ${r.status} (${ms} ms) · modèle ${model}\n${j.error?.type||''} ${j.error?.message||''}`)}
+  catch(e){dOut('Claude : erreur réseau ('+e.message+')')}};
+$('dOcr').onclick=async()=>{dOut('Lecture locale : chargement du moteur…');
+  try{const [T,ms]=await timed(loadTess);const c=document.createElement('canvas');c.width=420;c.height=110;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,420,110);x.fillStyle='#000';x.font='bold 40px serif';x.fillText('Château 2019',20,70);
+    const [r,ms2]=await timed(()=>T.recognize(c,'fra'));dOut(`Lecture locale OK · moteur ${ms} ms · lecture ${ms2} ms\nTexte lu sur l'image test : « ${r.data.text.trim()} »`)}
+  catch(e){dOut('Lecture locale ÉCHEC : '+e.message)}};
+$('dOcrSpace').onclick=async()=>{dOut('OCR.space : envoi d\'une image test…');
+  try{const c=document.createElement('canvas');c.width=520;c.height=200;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,520,200);x.fillStyle='#000';x.font='bold 44px serif';x.fillText('Château Test',20,70);x.font='32px serif';x.fillText('Côtes du Rhône 2019',20,140);
+    const b64=c.toDataURL('image/jpeg',0.9).split(',')[1];const [w,ms]=await timed(()=>ocrSpace(b64));dOut(`OCR.space OK (${ms} ms) · clé ${K.ocrKey?'personnelle':'de démonstration'}\nRésultat : ${JSON.stringify(w)}`)}
+  catch(e){dOut('OCR.space ÉCHEC : '+e.message)}};
+$('dRefresh').onclick=envInfo;
+$('dExport').onclick=()=>download('cave-revival-diagnostic.txt',APP_VERSION+'\n'+$('dEnv').innerText+'\n\n'+DLOG.join('\n'));
+$('dClear').onclick=()=>{DLOG=[];store.set('diag_log',DLOG);dlog('journal vidé')};
+document.querySelector('nav button[data-tab=diag]').addEventListener('click',envInfo);
+dlog('application chargée '+APP_VERSION);
 </script>
 </body>
 </html>
