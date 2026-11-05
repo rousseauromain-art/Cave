@@ -50,10 +50,15 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 4px;b
       <span class="status" id="oStatus">Allumez le scanner (bouton ON/OFF, il doit clignoter).</span>
     </div>
     <div id="oMsg"></div>
+    <details style="margin-top:10px"><summary class="small"><b>Debug scanner</b> (trames reçues)</summary>
+      <div class="row" style="margin:8px 0"><button class="b s" id="oRead">Lire maintenant</button><button class="b s" id="oDbgClear">Vider</button></div>
+      <div class="log mono" id="oDbgLog" style="max-height:220px"></div>
+    </details>
   </div>
 
   <div class="card hide" id="oResult">
     <h2>Profil du vin</h2>
+    <div id="oRadar" style="display:flex;flex-direction:column;align-items:center"></div>
     <div id="oBars"></div>
     <p id="oDesc" style="font-style:italic"></p>
     <div class="small mono" id="oRaw"></div>
@@ -242,28 +247,44 @@ const SVC_SCAN='f92158cd-26d2-4afc-8746-44bc9d7cc527',CH_SCAN='e5042891-e937-48c
 const STATES={1:['ok',"Vous pouvez plonger la pointe du Scanner dans votre verre de vin."],2:['warn',"Lumière ambiante trop intense : mettez-vous à l'abri de la lumière."],3:['warn',"Lumière trop instable : mettez-vous à l'abri de la lumière."],4:['ok',"Le scan est en cours…"]};
 let oDev=null,oState=-1,lastMeasure=null;
 function oMsg(cls,t){$('oMsg').innerHTML=`<div class="msg ${cls}">${esc(t)}</div>`}
+let oCh=null,oLastRx=0,oWatch=null,oRx=0;
+function oDbg(msg,lvl){dlog('MyOeno : '+msg,lvl);const el=$('oDbgLog');if(el){el.innerHTML+=esc(new Date().toLocaleTimeString('fr-FR')+'  '+msg)+'<br>';el.scrollTop=1e9}}
 const oConnect=async(all)=>{
   try{
+    oDbg('recherche ('+(all?'tous les appareils':'filtre nom/service')+')…');
     oDev=await pick(all,NAMES_OENO,[SVC_SCAN],[SVC_BAT,SVC_SCAN]);
-    oDev.addEventListener('gattserverdisconnected',()=>{$('oStatus').textContent='Déconnecté.';$('oDisc').disabled=true;$('oConnect').disabled=false});
+    oDbg(`appareil choisi : « ${oDev.name||'sans nom'} » (id ${oDev.id})`);
+    oDev.addEventListener('gattserverdisconnected',()=>{$('oStatus').textContent='Déconnecté.';$('oDisc').disabled=true;$('oConnect').disabled=false;clearInterval(oWatch);oDbg('déconnecté par l\'appareil ou le téléphone','warn')});
     $('oStatus').textContent='Connexion à '+(oDev.name||'appareil')+'…';
-    const srv=await oDev.gatt.connect();
+    const srv=await oDev.gatt.connect();oDbg('connexion GATT établie');
     $('oConnect').disabled=true;$('oDisc').disabled=false;
-    try{const bat=await(await(await srv.getPrimaryService(SVC_BAT)).getCharacteristic(CH_BAT)).readValue();
-      const lvl=bat.getUint8(0);$('oStatus').textContent=`Connecté · batterie ${lvl} %`;
-      if(lvl<25)oMsg('warn','Batterie critique : rechargez le scanner si la mesure échoue.');}catch(e){$('oStatus').textContent='Connecté (batterie illisible)'}
-    const ch=await(await srv.getPrimaryService(SVC_SCAN)).getCharacteristic(CH_SCAN);
-    try{await ch.readValue()}catch{}
+    try{const sv=await srv.getPrimaryServices();oDbg('services : '+sv.map(s=>s.uuid).join(', '))}catch(e){oDbg('liste des services impossible : '+e.message,'warn')}
+    try{const bc=await(await srv.getPrimaryService(SVC_BAT)).getCharacteristic(CH_BAT);const bat=await bc.readValue();
+      const lvl=bat.getUint8(0);oDbg(`batterie : ${lvl} % (brut ${hex(bat)})`);$('oStatus').textContent=`Connecté · batterie ${lvl} %`;
+      if(lvl<25)oMsg('warn','Batterie critique : rechargez le scanner si la mesure échoue.');
+      if(bc.properties.notify){bc.addEventListener('characteristicvaluechanged',e=>oDbg('batterie notifiée : '+e.target.value.getUint8(0)+' %'));bc.startNotifications().catch(()=>{})}}
+    catch(e){$('oStatus').textContent='Connecté (batterie illisible)';oDbg('batterie illisible : '+e.message,'warn')}
+    const ch=oCh=await(await srv.getPrimaryService(SVC_SCAN)).getCharacteristic(CH_SCAN);
+    const p=ch.properties;oDbg('caractéristique de mesure : '+['read','write','writeWithoutResponse','notify','indicate'].filter(k=>p[k]).join(', '));
+    try{const v=await ch.readValue();oDbg(`lecture initiale (${v.byteLength} o) : ${hex(v)||'(vide)'}`)}catch(e){oDbg('lecture initiale refusée : '+e.message)}
     ch.addEventListener('characteristicvaluechanged',e=>onScan(e.target.value));
-    await ch.startNotifications();
-    oMsg('ok','Scanner prêt. Placez-vous à l\'abri d\'une lumière directe.');
-  }catch(e){$('oStatus').textContent='Erreur : '+e.message;dlog('MyOeno connexion : '+e.message,'err')}
+    await ch.startNotifications();oDbg('abonnement aux notifications OK — en attente du scanner');
+    oLastRx=Date.now();oRx=0;clearInterval(oWatch);
+    oWatch=setInterval(()=>{if(!oDev||!oDev.gatt.connected)return clearInterval(oWatch);const s=Math.round((Date.now()-oLastRx)/1000);
+      if(s>=15&&s<17)oDbg(`aucune donnée depuis ${s} s : le scanner doit être allumé en continu (pas clignotant). Rechargez-le si la LED clignote rouge.`,'warn')},2000);
+    oMsg('ok','Scanner connecté. Attendez que sa lumière soit fixe, à l\'abri d\'une lumière directe.');
+  }catch(e){$('oStatus').textContent='Erreur : '+e.message;oDbg('erreur de connexion : '+e.message,'err')}
 };
+
 $('oConnect').onclick=()=>oConnect(false);$('oAll').onclick=()=>oConnect(true);
 $('oDisc').onclick=()=>oDev?.gatt.connected&&oDev.gatt.disconnect();
+const ST_NAME={0:'repos',1:'prêt',2:'trop de lumière',3:'lumière instable',4:'mesure en cours'};
 function onScan(dv){
+  oLastRx=Date.now();oRx++;
+  const hx=hex(dv),st11=dv.byteLength>=12?dv.getUint8(11):null;
+  oDbg(`trame n°${oRx} (${dv.byteLength} o) : ${hx}`+(st11!==null?` → octet 12 = ${st11} (${ST_NAME[st11]||'résultat'})`:' → trop courte, ignorée'));
   if(dv.byteLength<12)return;
-  const st=dv.getUint8(11);
+  const st=st11;
   if(STATES[st]){if(st!==oState)oMsg(...STATES[st]);oState=st;return}
   oState=st; if(st===0)return;
   const raw=[0,1,2,3,4,5].map(i=>dv.getUint16(i*2,false)); // big-endian, comme l'app
@@ -271,7 +292,7 @@ function onScan(dv){
   lastMeasure={date:new Date().toISOString(),raw,puissance:v[0],tanins:v[1],vivacite:v[2],garde:v[3],evolution:v[4]};
   showMeasure(lastMeasure); oMsg('ok','Mesure terminée 🍷');
 }
-const LBL=[['puissance','Puissance',100],['tanins','Tanins',100],['vivacite','Vivacité',100],['evolution','Évolution',100],['garde','Potentiel de garde (indice)',12]];
+const LBL=[['evolution','Évolution',100],['garde','Potentiel de garde (indice)',12]];
 function describe(m){
   const pick=(v,t)=>{for(const[a,b,w]of t)if(v>=a&&v<b)return w;return null};
   const tan=pick(m.tanins,[[0,40,'discrets'],[40,50,'souples'],[50,60,'légers'],[60,70,'fermes'],[70,101,'rugueux']]);
@@ -280,8 +301,23 @@ function describe(m){
   const dom=[['puissance',m.puissance],['tanins',m.tanins],['vivacité',m.vivacite]].sort((a,b)=>b[1]-a[1])[0][0];
   return `Dominante : ${dom}. On retrouve des tanins ${tan}, une acidité rendant ce vin ${viv}, et une puissance qui exprime ${pui} du vin.${m.evolution>45?' Vin déjà évolué.':' Vin encore jeune.'}`;
 }
+/* Radar « triangle » comme l'app d'origine (MPAndroidChart RadarChart, échelle 0–120, bordeaux rgb(136,23,66)) */
+function radarSVG(m,size=220,labels=true,ghost=null){
+  const c=size/2,R=size*0.36,ang=[-90,30,150].map(a=>a*Math.PI/180),keys=['puissance','tanins','vivacite'],names=['Puissance','Tanins','Vivacité'];
+  const pt=(v,i)=>[c+R*Math.max(0,Math.min(120,v))/120*Math.cos(ang[i]),c+R*Math.max(0,Math.min(120,v))/120*Math.sin(ang[i])];
+  const poly=o=>keys.map((k,i)=>pt(o[k]||0,i).join(',')).join(' ');
+  let s=`<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="Profil : puissance ${m.puissance}, tanins ${m.tanins}, vivacité ${m.vivacite}">`;
+  for(const f of [40,80,120])s+=`<polygon points="${keys.map((k,i)=>pt(f,i).join(',')).join(' ')}" fill="none" stroke="var(--line)" stroke-width="${f===120?2:1}"/>`;
+  keys.forEach((k,i)=>{const [x,y]=pt(120,i);s+=`<line x1="${c}" y1="${c}" x2="${x}" y2="${y}" stroke="var(--line)"/>`});
+  if(ghost)s+=`<polygon points="${poly(ghost)}" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  s+=`<polygon points="${poly(m)}" fill="rgb(136,23,66)" fill-opacity=".7" stroke="rgb(136,23,66)" stroke-width="2"/>`;
+  if(labels)keys.forEach((k,i)=>{const [x,y]=pt(150,i);s+=`<text x="${x}" y="${y+(i===0?-2:10)}" text-anchor="middle" font-size="12" fill="var(--ink)">${names[i]} <tspan font-weight="700">${m[k]}</tspan></text>`});
+  return s+'</svg>';
+}
 function showMeasure(m){
   $('oResult').classList.remove('hide');
+  const prev=hist.find(x=>x.date!==m.date);
+  $('oRadar').innerHTML=radarSVG(m,240,true,prev)+(prev?`<div class="small">Pointillés : votre mesure précédente (${esc(prev.nom||prev.date.slice(0,10))})</div>`:'');
   $('oBars').innerHTML=LBL.map(([k,l,max])=>`<div class="bar"><label><span>${l}</span><b>${m[k]}</b></label><div class="t"><div class="f" style="width:${Math.max(0,Math.min(100,m[k]/max*100))}%"></div></div></div>`).join('');
   $('oDesc').textContent=describe(m);
   $('oRaw').textContent='Brut (réf RGB / vin RGB) : '+m.raw.join(' · ');
@@ -289,8 +325,9 @@ function showMeasure(m){
 let hist=store.get('myoeno_hist',[]);
 function renderHist(){
   if(!hist.length){$('hList').textContent='Aucune mesure enregistrée.';return}
-  $('hList').innerHTML='<table><tr><th>Date</th><th>Vin</th><th>★</th><th>P</th><th>T</th><th>V</th><th>É</th><th></th></tr>'+hist.map((h,i)=>`<tr><td>${h.date.slice(0,10)}</td><td>${esc(h.nom)} ${esc(h.millesime)}</td><td>${esc(h.note)}</td><td>${h.puissance}</td><td>${h.tanins}</td><td>${h.vivacite}</td><td>${h.evolution}</td><td><a href="#" data-del="${i}">✕</a></td></tr>`).join('')+'</table>';
-  $('hList').querySelectorAll('[data-del]').forEach(a=>a.onclick=e=>{e.preventDefault();if(confirm('Supprimer ?')){hist.splice(+a.dataset.del,1);store.set('myoeno_hist',hist);renderHist()}});
+  $('hList').innerHTML='<table><tr><th></th><th>Date</th><th>Vin</th><th>★</th><th>P</th><th>T</th><th>V</th><th>É</th><th></th></tr>'+hist.map((h,i)=>`<tr data-open="${i}" style="cursor:pointer"><td>${radarSVG(h,48,false)}</td><td>${h.date.slice(0,10)}</td><td>${esc(h.nom)} ${esc(h.millesime)}</td><td>${esc(h.note)}</td><td>${h.puissance}</td><td>${h.tanins}</td><td>${h.vivacite}</td><td>${h.evolution}</td><td><a href="#" data-del="${i}">✕</a></td></tr>`).join('')+'</table>';
+  $('hList').querySelectorAll('[data-open]').forEach(r=>r.onclick=e=>{if(e.target.closest('[data-del]'))return;const x=hist[+r.dataset.open];lastMeasure=null;showMeasure(x);$('oDesc').textContent=describe(x)+(x.nom?` — ${x.nom} ${x.millesime||''}`:'')+(x.commentaire?` · ${x.commentaire}`:'');$('oResult').scrollIntoView({behavior:'smooth'})});
+  $('hList').querySelectorAll('[data-del]').forEach(a=>a.onclick=e=>{e.preventDefault();e.stopPropagation();if(confirm('Supprimer ?')){hist.splice(+a.dataset.del,1);store.set('myoeno_hist',hist);renderHist()}});
 }
 $('wSave').onclick=()=>{if(!lastMeasure)return;hist.unshift({...lastMeasure,nom:$('wName').value,millesime:$('wYear').value,note:$('wRate').value,aromes:$('wAroma').value,commentaire:$('wNote').value});store.set('myoeno_hist',hist);renderHist();['wName','wYear','wAroma','wNote'].forEach(i=>$(i).value='');$('wRate').value='';};
 $('hCsv').onclick=()=>{const k=['date','nom','millesime','note','puissance','tanins','vivacite','garde','evolution','aromes','commentaire'];download('degustations.csv','﻿'+[k.join(';'),...hist.map(h=>k.map(x=>`"${String(h[x]??'').replace(/"/g,'""')}"`).join(';'))].join('\n'),'text/csv')};
@@ -612,7 +649,7 @@ async function identify(b64,status){
 }
 
 /* ---- diagnostic ---- */
-const APP_VERSION='v8.1 (2026-11-02)';
+const APP_VERSION='v9.1 (2026-11-05)';
 const DSTAT={ok:0,bad:0,last:0};
 let DLOG=store.get('diag_log',[]);
 function dlog(msg,lvl='info'){const line=`${new Date().toLocaleString('fr-FR')} [${lvl}] ${msg}`;DLOG.push(line);if(DLOG.length>500)DLOG.shift();store.set('diag_log',DLOG);if($('dLog')){$('dLog').innerHTML=DLOG.slice(-200).map(esc).join('<br>');$('dLog').scrollTop=1e9}}
@@ -665,6 +702,9 @@ $('dExport').onclick=()=>download('cave-revival-diagnostic.txt',APP_VERSION+'\n'
 $('dClear').onclick=()=>{DLOG=[];store.set('diag_log',DLOG);dlog('journal vidé')};
 document.querySelector('nav button[data-tab=diag]').addEventListener('click',envInfo);
 dlog('application chargée '+APP_VERSION);
+
+$('oRead').onclick=async()=>{if(!oCh||!oDev?.gatt.connected)return oDbg('non connecté','warn');try{const v=await oCh.readValue();oDbg(`lecture manuelle (${v.byteLength} o) : ${hex(v)||'(vide)'}`)}catch(e){oDbg('lecture refusée : '+e.message,'err')}};
+$('oDbgClear').onclick=()=>{$('oDbgLog').innerHTML=''};
 </script>
 </body>
 </html>
