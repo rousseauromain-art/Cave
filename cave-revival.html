@@ -247,7 +247,7 @@ const SVC_SCAN='f92158cd-26d2-4afc-8746-44bc9d7cc527',CH_SCAN='e5042891-e937-48c
 const STATES={1:['ok',"Vous pouvez plonger la pointe du Scanner dans votre verre de vin."],2:['warn',"Lumière ambiante trop intense : mettez-vous à l'abri de la lumière."],3:['warn',"Lumière trop instable : mettez-vous à l'abri de la lumière."],4:['ok',"Le scan est en cours…"]};
 let oDev=null,oState=-1,lastMeasure=null;
 function oMsg(cls,t){$('oMsg').innerHTML=`<div class="msg ${cls}">${esc(t)}</div>`}
-let oCh=null,oLastRx=0,oWatch=null,oRx=0;
+let oCh=null,oLastRx=0,oWatch=null,oRx=0,oPoll=null;
 function oDbg(msg,lvl){dlog('MyOeno : '+msg,lvl);const el=$('oDbgLog');if(el){el.innerHTML+=esc(new Date().toLocaleTimeString('fr-FR')+'  '+msg)+'<br>';el.scrollTop=1e9}}
 const oConnect=async(all)=>{
   try{
@@ -261,14 +261,19 @@ const oConnect=async(all)=>{
     try{const sv=await srv.getPrimaryServices();oDbg('services : '+sv.map(s=>s.uuid).join(', '))}catch(e){oDbg('liste des services impossible : '+e.message,'warn')}
     try{const bc=await(await srv.getPrimaryService(SVC_BAT)).getCharacteristic(CH_BAT);const bat=await bc.readValue();
       const lvl=bat.getUint8(0);oDbg(`batterie : ${lvl} % (brut ${hex(bat)})`);$('oStatus').textContent=`Connecté · batterie ${lvl} %`;
-      if(lvl<25)oMsg('warn','Batterie critique : rechargez le scanner si la mesure échoue.');
+      if(lvl===0)oMsg('warn','Batterie à 0 % : le scanner ne pourra pas mesurer. Rechargez-le complètement (micro-USB) puis rallumez-le.');else if(lvl<25)oMsg('warn','Batterie critique : rechargez le scanner si la mesure échoue.');
       if(bc.properties.notify){bc.addEventListener('characteristicvaluechanged',e=>oDbg('batterie notifiée : '+e.target.value.getUint8(0)+' %'));bc.startNotifications().catch(()=>{})}}
     catch(e){$('oStatus').textContent='Connecté (batterie illisible)';oDbg('batterie illisible : '+e.message,'warn')}
     const ch=oCh=await(await srv.getPrimaryService(SVC_SCAN)).getCharacteristic(CH_SCAN);
     const p=ch.properties;oDbg('caractéristique de mesure : '+['read','write','writeWithoutResponse','notify','indicate'].filter(k=>p[k]).join(', '));
-    try{const v=await ch.readValue();oDbg(`lecture initiale (${v.byteLength} o) : ${hex(v)||'(vide)'}`)}catch(e){oDbg('lecture initiale refusée : '+e.message)}
     ch.addEventListener('characteristicvaluechanged',e=>onScan(e.target.value));
-    await ch.startNotifications();oDbg('abonnement aux notifications OK — en attente du scanner');
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));let subscribed=false;
+    for(let i=1;i<=4&&!subscribed;i++){await wait(400*i);
+      try{await ch.startNotifications();subscribed=true;oDbg(`abonnement aux notifications OK (essai ${i}) — en attente du scanner`)}
+      catch(e){oDbg(`abonnement refusé (essai ${i}/4) : ${e.message}`,'warn')}}
+    clearInterval(oPoll);
+    if(!subscribed){oDbg('notifications indisponibles : passage en lecture périodique (toutes les 0,8 s)','warn');let lastHx='';
+      oPoll=setInterval(async()=>{if(!oDev?.gatt.connected)return clearInterval(oPoll);try{const v=await ch.readValue(),x=hex(v);if(x!==lastHx){lastHx=x;onScan(v)}}catch{}},800)}
     oLastRx=Date.now();oRx=0;clearInterval(oWatch);
     oWatch=setInterval(()=>{if(!oDev||!oDev.gatt.connected)return clearInterval(oWatch);const s=Math.round((Date.now()-oLastRx)/1000);
       if(s>=15&&s<17)oDbg(`aucune donnée depuis ${s} s : le scanner doit être allumé en continu (pas clignotant). Rechargez-le si la LED clignote rouge.`,'warn')},2000);
@@ -649,7 +654,7 @@ async function identify(b64,status){
 }
 
 /* ---- diagnostic ---- */
-const APP_VERSION='v9.1 (2026-11-05)';
+const APP_VERSION='v9.2 (2026-11-05)';
 const DSTAT={ok:0,bad:0,last:0};
 let DLOG=store.get('diag_log',[]);
 function dlog(msg,lvl='info'){const line=`${new Date().toLocaleString('fr-FR')} [${lvl}] ${msg}`;DLOG.push(line);if(DLOG.length>500)DLOG.shift();store.set('diag_log',DLOG);if($('dLog')){$('dLog').innerHTML=DLOG.slice(-200).map(esc).join('<br>');$('dLog').scrollTop=1e9}}
