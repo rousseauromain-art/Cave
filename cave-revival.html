@@ -654,7 +654,7 @@ async function identify(b64,status){
 }
 
 /* ---- diagnostic ---- */
-const APP_VERSION='v9.2 (2026-11-05)';
+const APP_VERSION='v9.3 (2026-11-07)';
 const DSTAT={ok:0,bad:0,last:0};
 let DLOG=store.get('diag_log',[]);
 function dlog(msg,lvl='info'){const line=`${new Date().toLocaleString('fr-FR')} [${lvl}] ${msg}`;DLOG.push(line);if(DLOG.length>500)DLOG.shift();store.set('diag_log',DLOG);if($('dLog')){$('dLog').innerHTML=DLOG.slice(-200).map(esc).join('<br>');$('dLog').scrollTop=1e9}}
@@ -708,7 +708,7 @@ $('dClear').onclick=()=>{DLOG=[];store.set('diag_log',DLOG);dlog('journal vidé'
 document.querySelector('nav button[data-tab=diag]').addEventListener('click',envInfo);
 dlog('application chargée '+APP_VERSION);
 
-$('oRead').onclick=async()=>{if(!oCh||!oDev?.gatt.connected)return oDbg('non connecté','warn');try{const v=await oCh.readValue();oDbg(`lecture manuelle (${v.byteLength} o) : ${hex(v)||'(vide)'}`)}catch(e){oDbg('lecture refusée : '+e.message,'err')}};
+$('oRead').onclick=async()=>{if(!oCh||!oDev?.gatt.connected)return oDbg('non connecté','warn');try{const v=await oCh.readValue();oDbg('lecture manuelle :');onScan(v)}catch(e){oDbg('lecture refusée : '+e.message,'err')}};
 $('oDbgClear').onclick=()=>{$('oDbgLog').innerHTML=''};
 </script>
 </body>
