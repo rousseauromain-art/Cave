@@ -17,11 +17,12 @@ legacy/    références, ne pas modifier
 | Fichier | Rôle |
 |---|---|
 | `registry.js` | Liste des modules et leur ordre ; seul endroit qui importe `modules/*/module.js` |
-| `flags.js` | État activé/désactivé par module et par profil, persistant (IndexedDB `reglages`) |
+| `flags.js` | État activé/désactivé par module, persistant (`kv.js` : localStorage en S0-01, table IndexedDB `reglages` en S0-02) |
 | `store.js` | Accès IndexedDB générique : `get/put/list/remove(table, …)`, horodatage `modifie_le`, suppression logique |
 | `sync.js` | Pousse les lignes modifiées depuis le dernier envoi, tire celles dont `sync_at` > curseur ; dernier écrit gagne sur `modifie_le` ; photos dans le bucket `etiquettes/<user_id>/<produit_id>.jpg` |
 | `router.js` | Navigation par hash (`#/cave`, `#/fiche/<id>`…) |
 | `theme.js` | Applique `data-profil="vin|spiritueux"` sur `<html>` |
+| `ui/` | `dom.js` (création d'éléments sûre), `icones.js`, `badges.js` (drapeau, pastille, note, jauge, emplacement avec halo), `a-venir.js` |
 | `config.js` | URL Supabase + clé publique ; rien de secret |
 
 Contrat d'un module :
@@ -29,7 +30,10 @@ Contrat d'un module :
 export default {
   id: 'myoeno', titre: 'MyOeno', flag: { defaut: true, experimental: false },
   profils: ['vin'],                 // profils où il est disponible
-  ecrans: [{ route: '#/mesure', titre: 'Dégustation', rendu: (core, el) => {} }],
+  ecrans: [{ route: '/mesure', titre: 'Dégustation', icone: ICONES.etoile,
+             place: 'nav',          // 'nav' | 'centre' (bouton rond) | 'entete' (icône en haut)
+             ordre: 40,             // position dans la barre
+             rendu: (core, el) => {} }],
   tables: ['mesures'],              // tables qu'il lit/écrit
   init(core) {}                     // abonnements, actions sur les fiches
 };

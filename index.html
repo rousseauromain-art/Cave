@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr" data-profil="vin">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4A0B22">
+  <title>Cave</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icone.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icone-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="./themes/tokens.css">
+  <link rel="stylesheet" href="./themes/vin.css">
+  <link rel="stylesheet" href="./themes/spiritueux.css">
+  <script>
+    // Applique le profil mémorisé avant le premier rendu (évite un éclair de la mauvaise couleur).
+    try { var p = JSON.parse(localStorage.getItem('cave.profil')); if (p) document.documentElement.dataset.profil = p; } catch (e) {}
+  </script>
+</head>
+<body>
+  <div class="app">
+    <header class="entete">
+      <div class="entete-ligne">
+        <h1 id="titre">Cave</h1>
+        <div class="actions" id="actions"></div>
+      </div>
+    </header>
+    <main id="vue" tabindex="-1"></main>
+    <nav id="nav" aria-label="Navigation principale"></nav>
+  </div>
+  <noscript>Cave a besoin de JavaScript.</noscript>
+  <script type="module" src="./core/app.js"></script>
+</body>
+</html>

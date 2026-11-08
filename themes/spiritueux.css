@@ -1,0 +1,16 @@
+/* Profil Spiritueux : tourbe et ambre */
+[data-profil="spiritueux"] {
+  --c-entete: #2B1A10;
+  --c-entete-texte: #FFFFFF;
+  --c-entete-texte-2: #E9D6BE;
+  --c-accent: #8A4F12;
+  --c-accent-fonce: #5E340B;
+  --c-ombre-accent: rgba(138, 79, 18, 0.35);
+  --c-fond: #F7F1E8;
+  --c-surface: #FFFFFF;
+  --c-texte: #1E1610;
+  --c-texte-2: #5C5045;
+  --c-texte-nav: #685B4F;
+  --c-bord: #E8DCCB;
+  --c-bord-fort: #D6C7B2;
+}

@@ -1,0 +1,12 @@
+// Tests de bout en bout sur un serveur statique local (python3 ou http-server).
+const { defineConfig, devices } = require('@playwright/test');
+
+module.exports = defineConfig({
+  testDir: './tests',
+  use: { baseURL: 'http://localhost:8080/', ...devices['Pixel 7'] },
+  webServer: {
+    command: 'python3 -m http.server 8080',
+    url: 'http://localhost:8080/index.html',
+    reuseExistingServer: true
+  }
+});
