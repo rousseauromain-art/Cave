@@ -6,5 +6,6 @@ import scanner from '../modules/scanner/module.js';
 import degustations from '../modules/degustations/module.js';
 import rangements from '../modules/rangements/module.js';
 import aide from '../modules/aide/module.js';
+import myoenoSpiritueux from '../modules/myoeno-spiritueux/module.js';
 
-export const MODULES = [ceSoir, cave, scanner, degustations, rangements, aide];
+export const MODULES = [ceSoir, cave, scanner, degustations, myoenoSpiritueux, rangements, aide];

@@ -1,4 +1,5 @@
 // Point d'entrée : assemble modules, navigation, thème et écran Réglages.
+import { remplacer } from './ui/dom.js';
 import { MODULES } from './registry.js';
 import { VERSION } from './version.js';
 import { sur, emettre } from './evenements.js';
@@ -14,7 +15,8 @@ const core = {
   h, icone, ajouter, vider, ICONES, aller, sur, emettre, VERSION, profilCourant, basculerProfil, requete,
   store: sauvegarde.store,
   // Un écran peut préciser son titre (ex. le nom du vin sur une fiche).
-  titre: (texte) => { document.getElementById('titre').textContent = texte; }
+  titre: (texte) => { document.getElementById('titre').textContent = texte; },
+  moduleActif: (id) => { const m = MODULES.find((x) => x.id === id); return !!m && disponible(m) && estActif(m); }
 };
 
 const ecranReglages = {
@@ -94,7 +96,7 @@ async function rendre() {
   try {
     await ecran.rendu(core, neuf, params);
   } catch (e) {
-    neuf.replaceChildren(h('section', { class: 'carte' }, h('h2', {}, 'Oups'), h('p', {}, e.message)));
+    remplacer(neuf, h('section', { class: 'carte' }, h('h2', {}, 'Oups'), h('p', {}, e.message)));
     console.error(e);
   }
   if (numero !== rendus) return; // un rendu plus récent a pris la main

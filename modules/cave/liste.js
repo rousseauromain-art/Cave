@@ -1,4 +1,5 @@
 // Écran « Cave » : matrice d'étiquettes du profil courant, filtres, recherche.
+import { remplacer } from '../../core/ui/dom.js';
 import { inventaire } from '../../core/inventaire.js';
 import { FILTRES } from '../../data/filtres.js';
 import { tuile } from './tuile.js';
@@ -24,7 +25,7 @@ export async function ecranListe(core, el) {
     const f = filtres.find((x) => x.id === filtreCourant);
     const q = normaliser(recherche);
     const visibles = tous.filter((p) => f.test(p) && (!q || normaliser([p.nom, p.producteur, p.appellation, p.region].join(' ')).includes(q)));
-    grille.replaceChildren(...visibles.map((p) => h('div', { role: 'listitem' }, tuile(core, p))));
+    remplacer(grille, ...visibles.map((p) => h('div', { role: 'listitem' }, tuile(core, p))));
     vide.textContent = tous.length === 0
       ? 'Votre cave est vide. Ajoutez un premier vin avec le bouton +, ou reprenez vos données dans ⚙ Réglages.'
       : visibles.length === 0 ? 'Aucun résultat.' : '';

@@ -2,6 +2,7 @@
 import { produitEnrichi, sortirBouteille, ajouterBouteilles, nomComplet, aGrille, emplacementsLibres } from '../../core/inventaire.js';
 import { drapeau, pastille, note } from '../../core/ui/badges.js';
 import { urlPhoto } from '../../core/photos.js';
+import { radar, moyenne } from '../../core/ui/radar.js';
 
 const ouverts = new Set(['stock', 'profil', 'apogee']); // sections ouvertes par défaut, mémorisées le temps de la session
 
@@ -25,6 +26,12 @@ export async function ecranFiche(core, el, { id }) {
   const rangements = new Map((await core.store.list('rangements')).map((r) => [r.id, r]));
   const message = h('p', { class: 'message', role: 'status' });
   const style = p.styleInfo;
+  // Profil : moyenne des vins du même style (pointillés) et mots-clés des dégustations de ce vin.
+  const [mesures, degustations, tousProduits] = await Promise.all([core.store.list('mesures'), core.store.list('degustations'), core.store.list('produits')]);
+  const nbMesures = mesures.filter((m) => m.produit_id === p.id).length;
+  const memeStyle = new Set(tousProduits.filter((x) => p.style && x.style === p.style && x.id !== p.id).map((x) => x.id));
+  const moyStyle = moyenne(mesures.filter((m) => memeStyle.has(m.produit_id)));
+  const motsFiche = [...new Set(degustations.filter((d) => d.produit_id === p.id).flatMap((d) => d.mots_cles || []))];
 
   // En-tête photo
   const photo = h('div', { class: 'fiche-photo', style: style ? { background: style.fond, color: style.texte } : null },
@@ -82,11 +89,15 @@ export async function ecranFiche(core, el, { id }) {
       h('div', { class: 'boutons' }, actionPrincipale),
       h('div', { class: 'ajout-stock' }, quantite, choixRangement, h('button', { type: 'button', class: 'bouton', onclick: ajouter }, '+ Ajouter')),
       message),
-    section(core, 'profil', 'Profil MyOeno', p.mesure ? 'mesuré' : 'à mesurer',
+    section(core, 'profil', p.profil === 'vin' ? 'Profil MyOeno' : 'Dégustations', p.mesure ? `${nbMesures} mesure${nbMesures > 1 ? 's' : ''}` : 'à mesurer',
       p.mesure
-        ? h('p', {}, `Puissance ${p.mesure.puissance ?? '–'} · Tanins ${p.mesure.tanins ?? '–'} · Vivacité ${p.mesure.vivacite ?? '–'}`)
+        ? h('div', { class: 'profil-fiche' },
+          radar(p.mesure, { taille: 220, fantome: moyStyle, legende: moyStyle ? 'la moyenne de vos vins du même style' : '' }),
+          h('div', { class: 'indices' }, h('span', {}, 'Évolution ', h('strong', {}, String(p.mesure.evolution ?? '–'))), h('span', {}, 'Garde ', h('strong', {}, String(p.mesure.garde ?? '–'))), moyStyle ? h('span', { class: 'discret' }, '- - - même style') : null),
+          motsFiche.length ? h('div', { class: 'puces-mots lecture' }, motsFiche.map((m) => h('span', { class: 'puce-mot', 'aria-pressed': 'true' }, m))) : null,
+          h('p', { class: 'discret' }, p.stock > 1 ? `Ce profil vaut pour ses ${p.stock} bouteilles.` : 'Ce profil vaut pour toutes ses bouteilles.'))
         : h('p', { class: 'discret' }, 'Pas encore de mesure. Le profil vaudra pour toutes les bouteilles de ce vin.'),
-      h('a', { href: `#/degustations?produit=${p.id}`, class: 'bouton' }, 'Scanner avec MyOeno')),
+      h('a', { href: `#/mesure?produit=${p.id}`, class: 'bouton' }, p.profil === 'vin' ? 'Scanner avec MyOeno' : 'Déguster')),
     p.profil === 'vin' ? section(core, 'apogee', 'Apogée', p.apogee_debut ? `${p.apogee_debut}–${p.apogee_fin ?? '?'}` : 'non renseignée',
       p.apogee_debut
         ? h('p', {}, `Fenêtre d'apogée : ${p.apogee_debut} → ${p.apogee_fin ?? '?'}.`)

@@ -1,4 +1,5 @@
 // Sauvegarde : branche le stockage local sur Supabase, affiche l'état et la carte « Sauvegarde » des Réglages.
+import { remplacer } from './ui/dom.js';
 import { creerStore } from './store.js';
 import { creerSynchro } from './sync.js';
 import { adaptateurSupabase, sessionMemorisee } from './supabase.js';
@@ -125,7 +126,7 @@ export function initialiserSauvegarde({ adaptateur = adaptateurSupabase } = {}) 
           const donnees = JSON.parse(await f.text());
           if (estFormatV9(donnees)) {
             const b = await importerV9(store, donnees);
-            message.replaceChildren(bilanV9(b), ' ', h('a', { href: '#/cave' }, 'Voir ma cave'));
+            remplacer(message, bilanV9(b), ' ', h('a', { href: '#/cave' }, 'Voir ma cave'));
           } else {
             const n = await store.importer(donnees);
             message.textContent = `${n} ligne(s) importée(s).`;
@@ -166,7 +167,7 @@ export function initialiserSauvegarde({ adaptateur = adaptateurSupabase } = {}) 
           type: 'button', class: 'bouton principal', onclick: async () => {
             msg.textContent = 'Reprise en cours…';
             try {
-              msg.replaceChildren(bilanV9(await importerV9(store, ancien)), ' ', h('a', { href: '#/cave' }, 'Voir ma cave'));
+              remplacer(msg, bilanV9(await importerV9(store, ancien)), ' ', h('a', { href: '#/cave' }, 'Voir ma cave'));
             } catch (e) { msg.textContent = `Reprise impossible : ${e.message}`; }
           }
         }, 'Reprendre vins, photos et casier'),
