@@ -70,6 +70,7 @@ test.describe('écran Dégustation', () => {
     await expect(page.locator('.vin-mesure strong')).toHaveText('Vin Mesuré 2019');
     await page.getByRole('button', { name: 'Connecter le scanner' }).click();
     await expect(page.getByText('MyOeno 87 %')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connecter le scanner' })).toBeHidden();
     await expect(page.getByText('Mesure terminée.')).toBeVisible();
     await expect(page.locator('.resultat-mesure svg.radar')).toBeVisible();
     await expect(page.locator('.etapes li[aria-current]')).toHaveText('Résultat');

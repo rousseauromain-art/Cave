@@ -120,7 +120,9 @@ async function ecranDetail(core, el, { id }) {
     type: 'search', placeholder: 'Chercher un vin dans ce rangement', 'aria-label': 'Chercher un vin dans ce rangement',
     oninput: (e) => { recherche = e.target.value; choisi = null; dessiner(); }
   });
-  el.append(h('div', { class: 'recherche-casier' }, champ, resultat), zone, carteChoix);
+  const lienConnecte = r.type === 'montrouge' && core.moduleActif('montrouge')
+    ? h('a', { href: `#/montrouge/${r.id}`, class: 'bouton principal grand' }, 'Casier connecté : capteurs en direct') : null;
+  core.ajouter(el, [lienConnecte, h('div', { class: 'recherche-casier' }, champ, resultat), zone, carteChoix]);
   dessiner();
 }
 
