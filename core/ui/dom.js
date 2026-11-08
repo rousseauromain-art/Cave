@@ -37,6 +37,13 @@ export function icone(trace, taille = 24) {
   return svg;
 }
 
+// Remplace le contenu d'un élément en ignorant null/undefined/false (replaceChildren écrirait « null »).
+export function remplacer(el, ...enfants) {
+  vider(el);
+  ajouter(el, enfants);
+  return el;
+}
+
 export function vider(el) {
   while (el.firstChild) el.firstChild.remove();
   return el;

@@ -1,4 +1,5 @@
 // Ajout et modification d'un produit (stock 0 autorisé, sans mesure).
+import { remplacer } from '../../core/ui/dom.js';
 import { STYLES } from '../../data/styles.js';
 import { DRAPEAUX } from '../../data/drapeaux.js';
 import { ajouterBouteilles, aGrille, emplacementsLibres } from '../../core/inventaire.js';
@@ -27,15 +28,15 @@ export async function ecranFormulaire(core, el, { id }) {
     options.map(([v, t]) => h('option', { value: v, selected: p[nom] === v }, t)));
 
   const apercu = h('span', { class: 'apercu-photo' });
-  if (existant) urlPhoto(core.store, existant.id).then((u) => { if (u) apercu.replaceChildren(h('img', { src: u, alt: 'Photo actuelle' })); });
-  if (photoScan) apercu.replaceChildren(h('img', { src: URL.createObjectURL(photoScan), alt: 'Photo du scan' }));
+  if (existant) urlPhoto(core.store, existant.id).then((u) => { if (u) remplacer(apercu, h('img', { src: u, alt: 'Photo actuelle' })); });
+  if (photoScan) remplacer(apercu, h('img', { src: URL.createObjectURL(photoScan), alt: 'Photo du scan' }));
   const photo = h('input', {
     type: 'file', accept: 'image/*', capture: 'environment', name: 'photo',
     onchange: async (e) => {
       const f = e.target.files[0];
       if (!f) return;
       nouvellePhoto = await compresser(f);
-      apercu.replaceChildren(h('img', { src: URL.createObjectURL(nouvellePhoto), alt: 'Nouvelle photo' }));
+      remplacer(apercu, h('img', { src: URL.createObjectURL(nouvellePhoto), alt: 'Nouvelle photo' }));
     }
   });
 

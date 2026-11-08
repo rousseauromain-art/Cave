@@ -1,4 +1,5 @@
 // Scanner : photo d'étiquette → identification → vin de la cave reconnu, ou nouvelle fiche préremplie.
+import { remplacer } from '../../core/ui/dom.js';
 import { ICONES } from '../../core/ui/icones.js';
 import { compresser } from '../../core/photos.js';
 import { identifier, rapprocher, deposerBrouillon } from '../../core/identification.js';
@@ -20,8 +21,8 @@ async function ecran(core, el) {
       e.target.value = '';
       if (!f) return;
       const photo = await compresser(f);
-      apercu.replaceChildren(h('img', { src: URL.createObjectURL(photo), alt: 'Photo de l’étiquette' }));
-      resultat.replaceChildren();
+      remplacer(apercu, h('img', { src: URL.createObjectURL(photo), alt: 'Photo de l’étiquette' }));
+      remplacer(resultat);
       try {
         const trouve = await identifier(photo, profil, {
           statut: (t) => { statut.textContent = t; },
@@ -43,7 +44,7 @@ async function ecran(core, el) {
       ['Région', trouve.region], ['Millésime', trouve.millesime], ['Âge', trouve.age_ans && `${trouve.age_ans} ans`], ['Degré', trouve.degre && `${trouve.degre} %`]
     ].filter(([, v]) => v);
     const nouveau = () => { deposerBrouillon({ ...trouve, photo }); core.aller('/produit/nouveau'); };
-    resultat.replaceChildren(
+    remplacer(resultat, 
       h('section', { class: 'carte' },
         h('h2', {}, 'Lu sur l’étiquette'),
         champs.length ? h('dl', { class: 'champs-lus' }, champs.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, String(v))])) : h('p', { class: 'discret' }, 'Rien de lisible : essayez plus près, sans reflet.'),

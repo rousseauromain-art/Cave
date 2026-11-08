@@ -1,4 +1,5 @@
 // Rangements : placards, étagères, casiers. Vue en grille (culs de bouteille) avec recherche et halo jaune.
+import { remplacer } from '../../core/ui/dom.js';
 import { ICONES } from '../../core/ui/icones.js';
 import { inventaire, aGrille, emplacementsGrille, EN_CAVE } from '../../core/inventaire.js';
 import { STYLES } from '../../data/styles.js';
@@ -105,11 +106,11 @@ async function ecranDetail(core, el, { id }) {
         const trouve = bt.some(correspond);
         return h('li', { class: trouve ? 'trouve' : null }, h('a', { href: `#/fiche/${pid}` }, nomDe(bt[0])), h('span', { class: 'discret' }, ` · ${bt.length} · n° ${bt.map((b) => b.numero).join(', ')}`));
       });
-      zone.replaceChildren(h('div', { class: 'carte' }, lignes.length ? h('ul', { class: 'liste-simple' }, lignes) : h('p', { class: 'discret' }, 'Aucune bouteille ici.')));
+      remplacer(zone, h('div', { class: 'carte' }, lignes.length ? h('ul', { class: 'liste-simple' }, lignes) : h('p', { class: 'discret' }, 'Aucune bouteille ici.')));
     }
     const premier = trouves[0];
     resultat.textContent = choisi || recherche ? `${trouves.length} bouteille${trouves.length > 1 ? 's' : ''}${premier?.emplacement ? ` · ${premier.emplacement}` : ''}` : '';
-    carteChoix.replaceChildren(...(premier ? [h('a', { href: `#/fiche/${premier.produit_id}`, class: 'carte bouteille-choisie' },
+    remplacer(carteChoix, ...(premier ? [h('a', { href: `#/fiche/${premier.produit_id}`, class: 'carte bouteille-choisie' },
       emplacement(premier.numero, styleDe(premier)),
       h('span', {}, h('strong', {}, nomDe(premier)), h('span', { class: 'discret bloc' }, `${premier.emplacement || r.nom} · voir le détail dans l'inventaire`)))] : []));
   }
