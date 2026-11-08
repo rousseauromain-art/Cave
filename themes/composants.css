@@ -114,3 +114,12 @@
 .liste-simple { margin: 0; padding-left: 18px; }
 .liste-simple li { padding: 4px 0; }
 .liste-simple li.trouve { background: rgba(245,197,24,.25); border-radius: 6px; }
+
+/* Scanner */
+.scan { display: flex; flex-direction: column; gap: 12px; }
+.bouton.grand { height: 56px; font-size: 16px; gap: 10px; }
+.apercu-scan img { width: 100%; max-height: 260px; object-fit: contain; border-radius: 14px; background: var(--c-fond); }
+.statut-scan { margin: 0; font-size: 14px; color: var(--c-texte-2); min-height: 1.2em; }
+.champs-lus { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 12px; font-size: 14px; }
+.champs-lus dt { color: var(--c-texte-2); }
+.champs-lus dd { margin: 0; font-weight: 600; }

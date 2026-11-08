@@ -1,5 +1,5 @@
 // Service worker : l'app s'ouvre hors ligne. Réseau d'abord (mises à jour immédiates), cache en secours.
-const VERSION = '0.3.0'; // aligné sur core/version.js (vérifié par les tests)
+const VERSION = '0.4.0'; // aligné sur core/version.js (vérifié par les tests)
 const CACHE = `cave-${VERSION}`;
 const COQUILLE = [
   './', './index.html', './manifest.webmanifest',
@@ -7,7 +7,7 @@ const COQUILLE = [
   './core/app.js', './core/registry.js', './core/router.js', './core/flags.js', './core/theme.js',
   './core/kv.js', './core/evenements.js', './core/version.js', './core/config.js',
   './core/schema.js', './core/fusion.js', './core/store.js', './core/sync.js', './core/supabase.js', './core/sauvegarde.js',
-  './core/inventaire.js', './core/photos.js', './core/import-v9.js',
+  './core/inventaire.js', './core/photos.js', './core/import-v9.js', './core/cles.js', './core/identification.js', './data/apogee.json',
   './core/ui/dom.js', './core/ui/icones.js', './core/ui/a-venir.js', './core/ui/badges.js',
   './data/styles.js', './data/drapeaux.js', './data/filtres.js', './data/pays.js',
   './modules/ce-soir/module.js', './modules/cave/module.js',

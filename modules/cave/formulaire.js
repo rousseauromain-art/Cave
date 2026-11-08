@@ -3,6 +3,7 @@ import { STYLES } from '../../data/styles.js';
 import { DRAPEAUX } from '../../data/drapeaux.js';
 import { ajouterBouteilles, aGrille, emplacementsLibres } from '../../core/inventaire.js';
 import { compresser, urlPhoto, oublierPhoto } from '../../core/photos.js';
+import { prendreBrouillon } from '../../core/identification.js';
 
 function champ(h, libelle, controle, aide) {
   return h('label', { class: 'champ' }, h('span', { class: 'libelle' }, libelle), controle, aide ? h('span', { class: 'discret' }, aide) : null);
@@ -13,9 +14,12 @@ export async function ecranFormulaire(core, el, { id }) {
   const existant = id ? await core.store.get('produits', id) : null;
   const profil = existant?.profil || core.profilCourant();
   core.titre(existant ? 'Modifier' : profil === 'vin' ? 'Nouveau vin' : 'Nouveau spiritueux');
-  const p = existant || { profil };
+  // Après un scan : champs et photo préremplis.
+  const brouillon = existant ? null : prendreBrouillon();
+  const { photo: photoScan, source, texte, ...lus } = brouillon || {};
+  const p = existant || { profil, ...Object.fromEntries(Object.entries(lus).filter(([, v]) => v !== null && v !== '')) };
   const rangements = await core.store.list('rangements');
-  let nouvellePhoto = null;
+  let nouvellePhoto = photoScan || null;
 
   const entree = (nom, attrs = {}) => h('input', { name: nom, value: p[nom] ?? '', ...attrs });
   const select = (nom, options, vide) => h('select', { name: nom },
@@ -24,6 +28,7 @@ export async function ecranFormulaire(core, el, { id }) {
 
   const apercu = h('span', { class: 'apercu-photo' });
   if (existant) urlPhoto(core.store, existant.id).then((u) => { if (u) apercu.replaceChildren(h('img', { src: u, alt: 'Photo actuelle' })); });
+  if (photoScan) apercu.replaceChildren(h('img', { src: URL.createObjectURL(photoScan), alt: 'Photo du scan' }));
   const photo = h('input', {
     type: 'file', accept: 'image/*', capture: 'environment', name: 'photo',
     onchange: async (e) => {
@@ -36,6 +41,7 @@ export async function ecranFormulaire(core, el, { id }) {
 
   const vin = profil === 'vin';
   const form = h('form', { class: 'formulaire carte', novalidate: true },
+    source ? h('p', { class: 'discret' }, `Prérempli par ${source} : vérifiez avant d\u2019enregistrer.`) : null,
     h('div', { class: 'photo-ligne' }, apercu, champ(h, 'Photo de l’étiquette', photo)),
     champ(h, 'Nom *', entree('nom', { required: true, autocomplete: 'off' })),
     champ(h, vin ? 'Domaine / producteur' : 'Distillerie / marque', entree('producteur')),
@@ -47,6 +53,7 @@ export async function ecranFormulaire(core, el, { id }) {
     h('div', { class: 'deux' },
       champ(h, 'Origine', select('pays', Object.entries(DRAPEAUX).map(([k, d]) => [k, d.nom]), '—')),
       champ(h, 'Région', entree('region'))),
+    vin ? champ(h, 'Cépages', entree('cepages')) : null,
     vin ? champ(h, 'Appellation', entree('appellation'))
       : h('div', { class: 'deux' },
         champ(h, 'Degré (% vol.)', entree('degre', { type: 'number', inputmode: 'decimal', step: '0.1', min: '0', max: '80' })),
@@ -85,6 +92,7 @@ export async function ecranFormulaire(core, el, { id }) {
       nom: d.nom.trim(), producteur: d.producteur?.trim() || null, cuvee: d.cuvee?.trim() || null,
       millesime: nombre(d.millesime), age_ans: nombre(d.age_ans), style: d.style || null, pays: d.pays || null,
       region: d.region?.trim() || null, appellation: d.appellation?.trim() || null, degre: nombre(d.degre),
+      cepages: vin ? d.cepages?.trim() || null : p.cepages ?? null,
       fut: d.fut?.trim() || null, apogee_debut: nombre(d.apogee_debut), apogee_fin: nombre(d.apogee_fin),
       note: d.note === '' ? null : Math.max(0, Math.min(5, Number(d.note))), commentaire: d.commentaire?.trim() || null,
       photo_path: nouvellePhoto ? null : p.photo_path ?? null
