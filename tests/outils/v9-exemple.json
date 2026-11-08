@@ -1,0 +1,49 @@
+{
+ "ver": 2,
+ "nRows": 8,
+ "perRow": 6,
+ "bottomFirst": true,
+ "rightFirst": false,
+ "rows": {},
+ "slots": {
+  "8-0": "cv1",
+  "8-1": "cv1",
+  "5-2": "cv2",
+  "1-0": null
+ },
+ "wines": {
+  "cv1": {
+   "nom": "Domaine Fictif",
+   "domaine": "Maison Test",
+   "appellation": "Côtes du Rhône Villages",
+   "origine": "France > Rhône > Côtes du Rhône Villages",
+   "millesime": "2018",
+   "couleur": "rouge",
+   "photo": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
+   "garde_de": "2020",
+   "garde_a": "2023",
+   "apo_src": "test"
+  },
+  "cv2": {
+   "nom": "Bulles Imaginaires",
+   "domaine": "",
+   "appellation": "",
+   "origine": "",
+   "millesime": "",
+   "couleur": "effervescent"
+  },
+  "cv3": {
+   "nom": "Sans Bouteille",
+   "domaine": "",
+   "appellation": "",
+   "origine": "Italie > Toscane",
+   "millesime": "2015",
+   "couleur": "rouge"
+  }
+ },
+ "moves": [],
+ "rowsSeen": {},
+ "device": {
+  "address": "00:00:00:00:00:00"
+ }
+}

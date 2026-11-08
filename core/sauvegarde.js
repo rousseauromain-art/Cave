@@ -4,6 +4,7 @@ import { creerSynchro } from './sync.js';
 import { adaptateurSupabase, sessionMemorisee } from './supabase.js';
 import { emettre, sur } from './evenements.js';
 import { h, vider, icone } from './ui/dom.js';
+import { etatAncienneApp, estFormatV9, importerV9 } from './import-v9.js';
 
 const LIBELLES = {
   ok: 'Sauvegardé',
@@ -13,6 +14,10 @@ const LIBELLES = {
   erreur: 'Erreur de sauvegarde',
   deconnecte: 'Sauvegarde désactivée'
 };
+
+function bilanV9(b) {
+  return `${b.vins} vin(s) repris, ${b.photos} photo(s), ${b.bouteilles} bouteille(s) placée(s) dans le casier${b.deja ? `, ${b.deja} déjà présent(s)` : ''}.`;
+}
 
 const NUAGE = '<path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.1 4.75 4.75 0 0 0 7 18.5z"/>';
 
@@ -117,8 +122,14 @@ export function initialiserSauvegarde({ adaptateur = adaptateurSupabase } = {}) 
         const f = ev.target.files[0];
         if (!f) return;
         try {
-          const n = await store.importer(JSON.parse(await f.text()));
-          message.textContent = `${n} ligne(s) importée(s).`;
+          const donnees = JSON.parse(await f.text());
+          if (estFormatV9(donnees)) {
+            const b = await importerV9(store, donnees);
+            message.replaceChildren(bilanV9(b), ' ', h('a', { href: '#/cave' }, 'Voir ma cave'));
+          } else {
+            const n = await store.importer(donnees);
+            message.textContent = `${n} ligne(s) importée(s).`;
+          }
           synchro.planifier(0);
         } catch (e) {
           message.textContent = `Import impossible : ${e.message}`;
@@ -144,6 +155,24 @@ export function initialiserSauvegarde({ adaptateur = adaptateurSupabase } = {}) 
         h('label', { for: 'import-json', class: 'bouton' }, 'Importer'),
         fichier),
       message));
+
+    const ancien = etatAncienneApp();
+    if (ancien) {
+      const msg = h('p', { class: 'message', role: 'status' });
+      el.append(h('section', { class: 'carte', 'data-carte': 'reprise' },
+        h('h2', {}, 'Reprendre l\u2019ancienne app'),
+        h('p', {}, `Cave Revival v9 a laissé ${Object.keys(ancien.wines).length} vin(s) et ${Object.keys(ancien.slots || {}).length} bouteille(s) en casier dans ce navigateur.`),
+        h('button', {
+          type: 'button', class: 'bouton principal', onclick: async () => {
+            msg.textContent = 'Reprise en cours…';
+            try {
+              msg.replaceChildren(bilanV9(await importerV9(store, ancien)), ' ', h('a', { href: '#/cave' }, 'Voir ma cave'));
+            } catch (e) { msg.textContent = `Reprise impossible : ${e.message}`; }
+          }
+        }, 'Reprendre vins, photos et casier'),
+        h('p', { class: 'discret' }, 'Relançable sans doublon. Vos clés OCR/IA restent dans l\u2019ancienne page jusqu\u2019à la story S2.'),
+        msg));
+    }
   }
 
   return { store, synchro, demarrer, indicateur, carte };

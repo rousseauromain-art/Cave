@@ -72,7 +72,7 @@ export function creerSynchro({ store, adaptateur, notifier = () => {}, delai = 5
   async function recupererPhotos(uid) {
     for (const p of await store.list('produits')) {
       if (!p.photo_path || (await store.photo(p.id))) continue;
-      const blob = await adaptateur.telechargerPhoto(p.photo_path || cheminPhoto(uid, p.id));
+      const blob = await adaptateur.telechargerPhoto(cheminPhoto(uid, p.id, p.photo_path));
       if (blob) await store.enregistrerPhoto(p.id, blob, { distante: true });
     }
   }
@@ -108,6 +108,8 @@ export function creerSynchro({ store, adaptateur, notifier = () => {}, delai = 5
   return api;
 }
 
-export function cheminPhoto(uid, produitId) {
-  return `${uid}/${produitId}.jpg`;
+// photo_path est relatif au dossier de l'utilisateur (« <id>.jpg ») ; un chemin complet est accepté tel quel.
+export function cheminPhoto(uid, produitId, photoPath) {
+  if (photoPath && photoPath.includes('/')) return photoPath;
+  return `${uid}/${photoPath || `${produitId}.jpg`}`;
 }

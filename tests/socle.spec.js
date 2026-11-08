@@ -79,12 +79,19 @@ test('tous les fichiers de la coquille hors ligne existent', async () => {
   const liste = sw.match(/const COQUILLE = \[([\s\S]*?)\];/)[1].match(/'([^']+)'/g).map((s) => s.slice(1, -1));
   for (const f of liste.filter((x) => x !== './')) expect(fs.existsSync(path.join(racine, f)), f).toBe(true);
   const modules = fs.readdirSync(path.join(racine, 'modules'));
-  for (const m of modules) expect(liste, `module ${m} absent du cache`).toContain(`./modules/${m}/module.js`);
+  for (const m of modules) {
+    for (const f of fs.readdirSync(path.join(racine, 'modules', m)).filter((x) => x.endsWith('.js'))) {
+      expect(liste, `modules/${m}/${f} absent du cache`).toContain(`./modules/${m}/${f}`);
+    }
+  }
+  for (const f of fs.readdirSync(path.join(racine, 'core')).filter((x) => x.endsWith('.js'))) expect(liste, `core/${f}`).toContain(`./core/${f}`);
 });
 
 test('aucune couleur en dur dans les modules', async () => {
   for (const m of fs.readdirSync(path.join(racine, 'modules'))) {
-    const code = fs.readFileSync(path.join(racine, 'modules', m, 'module.js'), 'utf8');
-    expect(code, m).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/);
+    for (const f of fs.readdirSync(path.join(racine, 'modules', m)).filter((x) => x.endsWith('.js'))) {
+      const code = fs.readFileSync(path.join(racine, 'modules', m, f), 'utf8');
+      expect(code, `${m}/${f}`).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/);
+    }
   }
 });
