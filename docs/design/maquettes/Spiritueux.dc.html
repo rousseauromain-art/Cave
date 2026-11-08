@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Mes spiritueux — inventaire</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#8A4F12}a:hover{color:#2B1A10}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F1E8; font-family: 'Inter', system-ui, sans-serif; color: #1E1610">
+
+  <div style="background: #2B1A10; padding: 20px 16px 16px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 32px; line-height: 1.05; color: #FFFFFF">Mes spiritueux</h1>
+        <span style="font-size: 13px; color: #E9D6BE">12 bouteilles · 6 entamées · 6 origines</span>
+      </div>
+      <a href="Cave.dc.html" style="display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); color: #FFFFFF; text-decoration: none; font-size: 13px; font-weight: 600">Vins ⇄
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </a>
+    </div>
+    <div style="display: flex; gap: 8px; overflow: hidden">
+      <button type="button" aria-pressed="true" style="flex-shrink: 0; height: 34px; padding: 0 13px; border-radius: 999px; border: 0; background: #FFFFFF; color: #8A4F12; font: inherit; font-size: 13px; font-weight: 700">Tout</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">Entamées</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">Tourbés</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">Single malts</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">Rhums</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">Cognac &amp; EDV</button>
+      </div>
+  </div>
+
+  <div style="padding: 14px 16px 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px">
+    <sc-for list="{{ vins }}" as="w" hint-placeholder-count="12">
+      <a href="Fiche.dc.html" style="text-decoration: none; color: #1E1610; display: flex; flex-direction: column; gap: 6px">
+        <span style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 124px; padding: 0 8px; box-sizing: border-box; border-radius: 14px; background: {{ w.bg }}; color: {{ w.fg }}; text-align: center">
+          <sc-if value="{{ w.img }}" hint-placeholder-val="{{ true }}">
+            <img src="{{ w.img }}" alt="{{ w.alt }}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 14px; display: block">
+          </sc-if>
+          <sc-if value="{{ w.gen }}" hint-placeholder-val="{{ false }}">
+            <span style="font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 15px; line-height: 1.1">{{ w.court }}</span>
+            <span style="font-family: 'Fraunces', Georgia, serif; font-style: italic; font-size: 12px; opacity: 0.85">{{ w.an }}</span>
+          </sc-if>
+          <span aria-label="{{ w.aria }}" style="position: absolute; top: 7px; left: 7px; min-width: 26px; height: 26px; padding: 0 5px; box-sizing: border-box; border-radius: 13px; background: #8A4F12; border: 2px solid #FFFFFF; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 13px">{{ w.n }}</span>
+          <span role="img" aria-label="{{ w.type }}" style="position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; background: {{ w.dot }}; border: 2px solid #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.3); display: block">
+            <sc-if value="{{ w.bulles }}" hint-placeholder-val="{{ false }}">
+              <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" style="display: block"><circle cx="7" cy="12.5" r="1.7" fill="#FFFFFF"></circle><circle cx="12.5" cy="9" r="1.4" fill="#FFFFFF"></circle><circle cx="9" cy="6" r="1.1" fill="#FFFFFF"></circle></svg>
+            </sc-if>
+          </span>
+          <span style="position: absolute; bottom: 8px; left: 8px; display: flex; align-items: center; gap: 5px">
+          <span role="img" aria-label="{{ w.pays }}" style="width: 22px; height: 22px; border-radius: {{ flagRadius }}; overflow: hidden; box-shadow: 0 0 0 1.5px #FFFFFF, 0 1px 4px rgba(0,0,0,0.3); display: block; flex-shrink: 0">
+            <svg width="22" height="22" viewBox="0 0 24 24" preserveAspectRatio="none" aria-hidden="true" style="display: block">
+              <sc-for list="{{ w.flag.r }}" as="r" hint-placeholder-count="3">
+                <rect x="{{ r.x }}" y="{{ r.y }}" width="{{ r.w }}" height="{{ r.h }}" fill="{{ r.f }}"></rect>
+              </sc-for>
+              <sc-for list="{{ w.flag.p }}" as="p" hint-placeholder-count="0">
+                <polygon points="{{ p.pts }}" fill="{{ p.f }}"></polygon>
+              </sc-for>
+            </svg>
+          </span>
+          <sc-if value="{{ w.note }}" hint-placeholder-val="{{ true }}">
+            <span aria-label="Note {{ w.note }} sur 5" style="height: 22px; padding: 0 7px; border-radius: 11px; background: #FFFFFF; color: #1E1610; display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.25)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="#8A4F12" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4.1 4 1 5.6-5-2.6-5 2.6 1-5.6-4.1-4 5.6-.8z"></path></svg>{{ w.note }}
+            </span>
+          </sc-if>
+          </span>
+        </span>
+        <span role="img" aria-label="{{ w.nivLabel }}" style="height: 5px; border-radius: 3px; background: #E8DCCB; overflow: hidden; display: block; margin-top: -1px"><span style="display: block; height: 100%; width: {{ w.niv }}; background: #8A4F12; border-radius: 3px"></span></span>
+        <span style="font-size: 12.5px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 31px; margin-top: -2px">{{ w.nom }}</span>
+        <span style="font-size: 11.5px; color: #5C5045; margin-top: -3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ w.info }}</span>
+      </a>
+    </sc-for>
+  </div>
+
+  <nav aria-label="Navigation principale" style="position: absolute; left: 0; right: 0; bottom: 0; height: 82px; background: #FFFFFF; border-top: 1px solid #E8DCCB; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: start; padding-top: 10px">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #685B4F; font-size: 11px; font-weight: 500">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8l-.5 6a3.5 3.5 0 0 1-7 0L8 3z"></path><path d="M12 12.5V20"></path><path d="M8.5 20h7"></path></svg>Ce soir</a>
+    <a href="Cave.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #8A4F12; font-size: 11px; font-weight: 700">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"></rect></svg>Spiritueux</a>
+    <a href="Scan.dc.html" aria-label="Scanner une étiquette" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #8A4F12; font-size: 11px; font-weight: 700; margin-top: -30px">
+      <span style="width: 58px; height: 58px; border-radius: 29px; background: #8A4F12; box-shadow: 0 8px 20px rgba(138,79,18,0.35); display: flex; align-items: center; justify-content: center; color: #FFFFFF; border: 4px solid #FFFFFF">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"></path><path d="M8 12h8"></path></svg>
+      </span>Scanner</a>
+    <a href="Mesure.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #685B4F; font-size: 11px; font-weight: 500">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4.1 4 1 5.6-5-2.6-5 2.6 1-5.6-4.1-4 5.6-.8z"></path></svg>Dégustations</a>
+    <a href="Casier.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #685B4F; font-size: 11px; font-weight: 500">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"></rect><path d="M4 9.5h16M4 15h16"></path></svg>Rangements</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"drapeau":{"editor":"enum","options":["rond","carré"],"default":"rond"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  star(cx, cy, R, r) {
+    var pts = [];
+    for (var i = 0; i < 10; i++) {
+      var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r : R;
+      pts.push((cx + rr * Math.cos(a)).toFixed(2) + ',' + (cy + rr * Math.sin(a)).toFixed(2));
+    }
+    return pts.join(' ');
+  }
+  octo(cx, cy, r) {
+    var pts = [];
+    for (var i = 0; i < 8; i++) { var a = i * Math.PI / 4; pts.push((cx + r * Math.cos(a)).toFixed(2) + ',' + (cy + r * Math.sin(a)).toFixed(2)); }
+    return pts.join(' ');
+  }
+  circ(cx, cy, r) {
+    var pts = [];
+    for (var i = 0; i < 24; i++) { var a = i * Math.PI / 12; pts.push((cx + r * Math.cos(a)).toFixed(2) + ',' + (cy + r * Math.sin(a)).toFixed(2)); }
+    return pts.join(' ');
+  }
+  renderVals() {
+    function R(x, y, w, h, f) { return { x: x, y: y, w: w, h: h, f: f }; }
+    var st = 24 / 9, bz = [R(0, 0, 24, 24, '#FFFFFF')];
+    for (var k = 0; k < 9; k += 2) bz.push(R(0, k * st, 24, st, '#111111'));
+    bz.push(R(0, 0, 11, 5 * st, '#FFFFFF'));
+    var us = [R(0, 0, 24, 24, '#FFFFFF')];
+    for (var k2 = 0; k2 < 7; k2 += 2) us.push(R(0, k2 * 24 / 7, 24, 24 / 7, '#B22234'));
+    us.push(R(0, 0, 11, 24 / 7 * 4, '#3C3B6E'));
+    function d(x, y) { return { pts: x + ',' + (y - 1.4) + ' ' + (x + 0.9) + ',' + y + ' ' + x + ',' + (y + 1.4) + ' ' + (x - 0.9) + ',' + y, f: '#111111' }; }
+    var F = {
+      SC: { nom: 'Écosse', r: [R(0, 0, 24, 24, '#005EB8')], p: [{ pts: '0,0 3.4,0 24,20.6 24,24 20.6,24 0,3.4', f: '#FFFFFF' }, { pts: '24,0 24,3.4 3.4,24 0,24 0,20.6 20.6,0', f: '#FFFFFF' }] },
+      BZH: { nom: 'Bretagne', r: bz, p: [d(2.8, 3.4), d(5.5, 3.4), d(8.2, 3.4), d(4.1, 7.6), d(6.9, 7.6), d(5.5, 11.2)] },
+      JP: { nom: 'Japon', r: [R(0, 0, 24, 24, '#FFFFFF')], p: [{ pts: this.circ(12, 12, 6.2), f: '#BC002D' }] },
+      FR: { nom: 'France', r: [R(0, 0, 8, 24, '#0055A4'), R(8, 0, 8, 24, '#FFFFFF'), R(16, 0, 8, 24, '#EF4135')], p: [] },
+      US: { nom: 'États-Unis', r: us, p: [] },
+      VE: { nom: 'Venezuela', r: [R(0, 0, 24, 8, '#FFCC00'), R(0, 8, 24, 8, '#00247D'), R(0, 16, 24, 8, '#CF142B')], p: [] }
+    };
+    var S = {
+      tourbe: { dot: '#3A2A1E', bg: '#4A3626', fg: '#FFFFFF', t: 'Single malt tourbé' },
+      malt: { dot: '#C98A2B', bg: '#E2B465', fg: '#2B1A08', t: 'Single malt' },
+      sherry: { dot: '#7A2E14', bg: '#8E3A1C', fg: '#FFFFFF', t: 'Single malt, fût de sherry' },
+      blend: { dot: '#D9A441', bg: '#EBCB86', fg: '#2B1A08', t: 'Blend' },
+      bourbon: { dot: '#A4501F', bg: '#9C4A1A', fg: '#FFFFFF', t: 'Bourbon' },
+      rhum: { dot: '#5E3218', bg: '#6E3C1E', fg: '#FFFFFF', t: 'Rhum' },
+      cognac: { dot: '#B5651D', bg: '#D48A45', fg: '#2B1A08', t: 'Cognac / Armagnac' },
+      edv: { dot: '#EDE6D3', bg: '#F3EEDF', fg: '#3A3020', t: 'Eau-de-vie blanche' }
+    };
+    function v(nom, court, an, info, n, s, pays, niv, note) {
+      var c = S[s], fl = F[pays];
+      return {
+        nom: nom, court: court, an: an, info: info, n: n, bg: c.bg, fg: c.fg, dot: c.dot, bulles: false,
+        type: c.t, pays: fl.nom, flag: fl, img: '', gen: true, note: note || '', alt: '',
+        niv: niv + '%', nivLabel: niv === 100 ? 'Bouteille pleine' : 'Bouteille entamée, reste ' + niv + ' %',
+        aria: n + (n > 1 ? ' bouteilles' : ' bouteille')
+      };
+    }
+    var rond = (this.props.drapeau ?? 'rond') === 'rond';
+    return {
+      flagRadius: rond ? '11px' : '4px',
+      vins: [
+        v('Lagavulin 16 ans', 'Lagavulin', '16 ans', 'Islay · 43 %', 1, 'tourbe', 'SC', 35, '4,5'),
+        v('Armorik Classic', 'Armorik', 'Classic', 'Lannion · 46 %', 1, 'malt', 'BZH', 60, '4'),
+        v('Glenfarclas 15 ans', 'Glenfarclas', '15 ans', 'Speyside · 46 %', 1, 'sherry', 'SC', 100),
+        v('Kornog Roc’h Hir', 'Kornog', 'Roc’h Hir', 'Pleubian · 46 %', 1, 'tourbe', 'BZH', 80, '4,5'),
+        v('Yamazaki 12 ans', 'Yamazaki', '12 ans', 'Osaka · 43 %', 1, 'malt', 'JP', 100),
+        v('Nikka From the Barrel', 'Nikka', 'From the Barrel', 'Blend · 51,4 %', 2, 'blend', 'JP', 55, '4'),
+        v('Eddu Silver', 'Eddu', 'Silver', 'Plomelin · 40 %', 1, 'blend', 'BZH', 100),
+        v('Talisker 10 ans', 'Talisker', '10 ans', 'Skye · 45,8 %', 1, 'tourbe', 'SC', 20, '4'),
+        v('Buffalo Trace', 'Buffalo Trace', 'Kentucky', 'Bourbon · 40 %', 1, 'bourbon', 'US', 70, '3,5'),
+        v('Clément VSOP', 'Clément', 'VSOP', 'Martinique · 40 %', 1, 'rhum', 'FR', 100),
+        v('Diplomático Reserva Exclusiva', 'Diplomático', 'Reserva', 'Venezuela · 40 %', 1, 'rhum', 'VE', 45, '3'),
+        v('Poire Williams familiale', 'Poire', 'Williams', 'Eau-de-vie · famille', 1, 'edv', 'FR', 30, '5')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

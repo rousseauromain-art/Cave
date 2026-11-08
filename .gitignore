@@ -1,0 +1,13 @@
+# Données personnelles : jamais dans le dépôt public
+*.export.json
+data/private/
+*.jpg
+*.jpeg
+!docs/**/*.jpg
+# Outils
+node_modules/
+test-results/
+playwright-report/
+.env*
+supabase/.temp/
+supabase/.branches/

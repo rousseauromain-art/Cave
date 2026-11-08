@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Mesure MyOeno</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6D1030}a:hover{color:#4A0B22}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; font-family: 'Inter', system-ui, sans-serif; color: #1C1013">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 8px">
+    <a href="Scan.dc.html" aria-label="Retour" style="width: 40px; height: 40px; border-radius: 20px; border: 1px solid #EADFE2; color: #6D1030; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <span style="font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 20px">Dégustation</span>
+    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #E5F1EA; color: #245C40; font-size: 12px; font-weight: 600"><span style="width: 7px; height: 7px; border-radius: 4px; background: #2F6F4E"></span>MyOeno 100&#8239;%</span>
+  </div>
+
+  <div style="margin: 4px 16px 0; padding: 10px 12px; border-radius: 16px; background: #F6F0F1; display: flex; align-items: center; gap: 12px">
+    <img src="/_blob/51406174e25d459cb10cb85c52347d22" alt="" style="width: 38px; height: 50px; object-fit: cover; border-radius: 8px">
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0">
+      <span style="font-size: 14px; font-weight: 700">Le Chant des Sorcières 2019</span>
+      <span style="font-size: 12px; color: #5E4F55">Verre · rattaché au vin de votre cave</span>
+    </div>
+    <a href="Scan.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none">Changer</a>
+  </div>
+
+  <ol aria-label="Étapes de la mesure" style="list-style: none; margin: 14px 16px 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+    <li style="display: flex; flex-direction: column; gap: 6px"><span style="height: 4px; border-radius: 2px; background: #6D1030"></span><span style="font-size: 11.5px; font-weight: 600; color: #6D1030">Prêt</span></li>
+    <li style="display: flex; flex-direction: column; gap: 6px"><span style="height: 4px; border-radius: 2px; background: #6D1030"></span><span style="font-size: 11.5px; font-weight: 600; color: #6D1030">Dans le verre</span></li>
+    <li style="display: flex; flex-direction: column; gap: 6px"><span style="height: 4px; border-radius: 2px; background: #6D1030"></span><span style="font-size: 11.5px; font-weight: 600; color: #6D1030">Mesure</span></li>
+    <li aria-current="step" style="display: flex; flex-direction: column; gap: 6px"><span style="height: 4px; border-radius: 2px; background: #6D1030"></span><span style="font-size: 11.5px; font-weight: 700; color: #1C1013">Résultat</span></li>
+  </ol>
+
+  <div style="margin: 14px 16px 0; border: 1px solid #EADFE2; border-radius: 22px; padding: 12px 14px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+    <svg viewBox="0 0 250 200" width="215" height="172" role="img" aria-label="Profil mesuré : puissance 60, tanins 64, vivacité 52 ; en pointillés, la moyenne de vos Côtes du Rhône Villages">
+      <polygon points="{{ t.g3 }}" fill="#FBF7F8" stroke="#E3D5DA" stroke-width="1.4"></polygon>
+      <polygon points="{{ t.g2 }}" fill="none" stroke="#EADFE2" stroke-width="1"></polygon>
+      <polygon points="{{ t.g1 }}" fill="none" stroke="#EADFE2" stroke-width="1"></polygon>
+      <polygon points="{{ t.type }}" fill="none" stroke="#5E4F55" stroke-width="1.5" stroke-dasharray="5 4"></polygon>
+      <polygon points="{{ t.wine }}" fill="#6D1030" fill-opacity="0.8" stroke="#6D1030" stroke-width="2.2" stroke-linejoin="round"></polygon>
+      <text x="125" y="13" font-size="12" text-anchor="middle" fill="#1C1013" font-weight="600" font-family="Inter, sans-serif">Puissance 60</text>
+      <text x="248" y="194" font-size="12" text-anchor="end" fill="#1C1013" font-weight="600" font-family="Inter, sans-serif">Tanins 64</text>
+      <text x="2" y="194" font-size="12" text-anchor="start" fill="#1C1013" font-weight="600" font-family="Inter, sans-serif">Vivacité 52</text>
+    </svg>
+    <div style="display: flex; gap: 18px; font-size: 12.5px; color: #5E4F55">
+      <span>Évolution <strong style="color: #1C1013">41</strong></span>
+      <span>Garde <strong style="color: #1C1013">4</strong></span>
+      <span style="display: inline-flex; align-items: center; gap: 6px"><svg width="22" height="8" viewBox="0 0 22 8" aria-hidden="true"><path d="M1 4h20" stroke="#5E4F55" stroke-width="1.5" stroke-dasharray="5 4"></path></svg>vos CdR Villages</span>
+    </div>
+    <p style="margin: 2px 0 0; font-family: 'Fraunces', Georgia, serif; font-style: italic; font-size: 15px; line-height: 1.4; text-align: center; color: #3B2D32">Tanins fermes, acidité vigoureuse, une puissance qui exprime la chaleur du vin.</p>
+  </div>
+
+  <div style="margin: 14px 16px 0; display: flex; align-items: center; justify-content: space-between">
+    <span id="lbl-note" style="font-size: 14px; font-weight: 700">Votre note</span>
+    <div role="radiogroup" aria-labelledby="lbl-note" style="display: flex; gap: 4px">
+      <sc-for list="{{ stars }}" as="s" hint-placeholder-count="5">
+        <button type="button" role="radio" aria-checked="{{ s.on }}" aria-label="{{ s.label }}" onClick="{{ s.pick }}" style="width: 40px; height: 40px; border: 0; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center; color: #6D1030">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="{{ s.fill }}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4.1 4 1 5.6-5-2.6-5 2.6 1-5.6-4.1-4 5.6-.8z"></path></svg>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="margin: 10px 16px 0; display: flex; justify-content: space-between; align-items: baseline">
+    <span style="font-size: 14px; font-weight: 700">Mots-clés</span>
+    <span style="font-size: 12px; color: #5E4F55">suggérés d'après le profil · touchez pour ajouter</span>
+  </div>
+  <div style="margin: 8px 16px 0; display: flex; gap: 7px; flex-wrap: wrap">
+    <sc-for list="{{ aromes }}" as="a" hint-placeholder-count="5">
+      <button type="button" aria-pressed="{{ a.on }}" onClick="{{ a.toggle }}" style="height: 32px; padding: 0 11px; border-radius: 999px; border: {{ a.border }}; background: {{ a.bg }}; color: {{ a.fg }}; font: inherit; font-size: 13px; font-weight: 600">{{ a.label }}</button>
+    </sc-for>
+    <button type="button" style="height: 32px; padding: 0 11px; border-radius: 999px; border: 1.5px dashed #B9A5AC; background: transparent; color: #6D1030; font: inherit; font-size: 13px; font-weight: 600">+ Autre</button>
+  </div>
+
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 22px; display: flex; flex-direction: column; gap: 8px">
+    <a href="Fiche.dc.html" style="height: 52px; border-radius: 16px; background: #6D1030; color: #FFFFFF; text-decoration: none; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px">Enregistrer la dégustation</a>
+    <span style="text-align: center; font-size: 12px; color: #5E4F55">Le profil rejoint la fiche du vin et sert pour toutes ses bouteilles.</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { note: 4, on: { 'Fruits noirs': true, 'Épices': true, 'Tanins fermes': true } };
+  }
+  triPts(p, t, v, cx, cy, R) {
+    function pt(val, deg) {
+      var r = R * Math.max(0, Math.min(120, val)) / 120, a = deg * Math.PI / 180;
+      return (cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1);
+    }
+    return [pt(p, -90), pt(t, 30), pt(v, 150)].join(' ');
+  }
+  renderVals() {
+    var self = this, cx = 125, cy = 112, R = 92;
+    var note = this.state.note || 0, on = this.state.on || {};
+    var stars = [1, 2, 3, 4, 5].map(function (n) {
+      return { on: n <= note ? 'true' : 'false', fill: n <= note ? '#6D1030' : 'none', label: n + ' sur 5', pick: function () { self.setState({ note: n }); } };
+    });
+    var aromes = ['Fruits noirs', 'Épices', 'Garrigue', 'Tanins fermes', 'Fruits rouges', 'Réglisse', 'Boisé', 'À carafer', 'Long en bouche'].map(function (k) {
+      var sel = !!on[k];
+      return {
+        label: k, on: sel ? 'true' : 'false',
+        border: sel ? '1.5px solid #6D1030' : '1px solid #E3D5DA', bg: sel ? '#6D1030' : '#FFFFFF', fg: sel ? '#FFFFFF' : '#1C1013',
+        toggle: function () { var o = Object.assign({}, self.state.on); o[k] = !o[k]; self.setState({ on: o }); }
+      };
+    });
+    return {
+      stars: stars, aromes: aromes,
+      t: {
+        g3: this.triPts(120, 120, 120, cx, cy, R), g2: this.triPts(80, 80, 80, cx, cy, R), g1: this.triPts(40, 40, 40, cx, cy, R),
+        wine: this.triPts(60, 64, 52, cx, cy, R), type: this.triPts(63, 66, 49, cx, cy, R)
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
