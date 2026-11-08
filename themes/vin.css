@@ -1,0 +1,16 @@
+/* Profil Vin : bordeaux */
+:root, [data-profil="vin"] {
+  --c-entete: #4A0B22;
+  --c-entete-texte: #FFFFFF;
+  --c-entete-texte-2: #EBD3DB;
+  --c-accent: #6D1030;
+  --c-accent-fonce: #4A0B22;
+  --c-ombre-accent: rgba(109, 16, 48, 0.35);
+  --c-fond: #F6F0F1;
+  --c-surface: #FFFFFF;
+  --c-texte: #1C1013;
+  --c-texte-2: #5E4F55;
+  --c-texte-nav: #6B5C62;
+  --c-bord: #EADFE2;
+  --c-bord-fort: #D9CBD0;
+}
