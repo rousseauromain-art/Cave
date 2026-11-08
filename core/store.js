@@ -26,10 +26,22 @@ function ouvrir(nom) {
 }
 
 export function creerStore(nom = 'cave', { notifier = () => {} } = {}) {
-  const base = ouvrir(nom);
+  // Connexion ouverte à la demande ; refermée si une autre page met la base à jour ou la supprime.
+  let base = null;
+  function connexion() {
+    if (!base) {
+      base = ouvrir(nom).then((db) => {
+        db.onversionchange = () => { db.close(); base = null; };
+        db.onclose = () => { base = null; };
+        return db;
+      });
+      base.catch(() => { base = null; });
+    }
+    return base;
+  }
 
   async function magasin(table, mode = 'readonly') {
-    return (await base).transaction(table, mode).objectStore(table);
+    return (await connexion()).transaction(table, mode).objectStore(table);
   }
   const brut = {
     get: async (table, id) => promesse((await magasin(table)).get(id)),
@@ -133,7 +145,7 @@ export function creerStore(nom = 'cave', { notifier = () => {} } = {}) {
       return n;
     },
 
-    async fermer() { (await base).close(); }
+    async fermer() { if (base) (await base).close(); base = null; }
   };
   return api;
 }

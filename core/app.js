@@ -107,6 +107,8 @@ async function rendre() {
 function rendreReglages(el) {
   const profil = profilCourant();
   sauvegarde.carte(el);
+  // Réglages propres aux modules actifs (ex. clés d'identification).
+  for (const m of modulesActifs()) m.reglages?.(core, el);
   el.append(
     h('section', { class: 'carte' },
       h('h2', {}, 'Profil'),
