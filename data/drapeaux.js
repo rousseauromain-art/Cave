@@ -35,5 +35,8 @@ export const DRAPEAUX = {
   JP: { nom: 'Japon', r: [[0, 0, 24, 24, '#FFFFFF']], p: [[polygoneRegulier(12, 12, 6.2, 24), '#BC002D']] },
   US: { nom: 'États-Unis', r: [[0, 0, 24, 24, '#FFFFFF'], ...[0, 2, 4, 6].map((k) => [0, k * pas7, 24, pas7, '#B22234']), [0, 0, 11, pas7 * 4, '#3C3B6E']] },
   VE: { nom: 'Venezuela', r: bandesH('#FFCC00', '#00247D', '#CF142B') },
-  IE: { nom: 'Irlande', r: bandesV('#169B62', '#FFFFFF', '#FF883E') }
+  IE: { nom: 'Irlande', r: bandesV('#169B62', '#FFFFFF', '#FF883E') },
+  CA: { nom: 'Canada', r: [[0, 0, 6, 24, '#D52B1E'], [6, 0, 12, 24, '#FFFFFF'], [18, 0, 6, 24, '#D52B1E']], p: [['12,6 13.6,9.6 15.6,8.8 14.6,13 16.6,12.4 12,17 7.4,12.4 9.4,13 8.4,8.8 10.4,9.6', '#D52B1E']] },
+  RU: { nom: 'Russie', r: bandesH('#FFFFFF', '#0039A6', '#D52B1E') },
+  CU: { nom: 'Cuba', r: [[0, 0, 24, 24, '#002A8F'], [0, 4.8, 24, 4.8, '#FFFFFF'], [0, 14.4, 24, 4.8, '#FFFFFF']], p: [['0,0 12,12 0,24', '#CF142B']] }
 };

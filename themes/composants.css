@@ -196,3 +196,4 @@ a.bouton { text-decoration: none; }
 .journal { margin: 0; padding-left: 18px; font-size: 12px; max-height: 240px; overflow: auto; color: var(--c-texte-2); }
 .journal li.erreur { color: var(--c-declin); }
 [data-carte="diagnostic"] { margin-bottom: 12px; }
+.notes-texte { white-space: pre-line; }
