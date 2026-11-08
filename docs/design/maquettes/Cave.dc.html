@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Ma cave — matrice d'étiquettes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6D1030}a:hover{color:#4A0B22}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F0F1; font-family: 'Inter', system-ui, sans-serif; color: #1C1013">
+
+  <div style="background: #4A0B22; padding: 20px 16px 16px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 32px; line-height: 1.05; color: #FFFFFF">Ma cave</h1>
+        <span style="font-size: 13px; color: #EBD3DB">32 bouteilles · 12 vins · 3 pays</span>
+      </div>
+      <a href="Casier.dc.html" style="display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); color: #FFFFFF; text-decoration: none; font-size: 13px; font-weight: 600">Tous rangements
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </a>
+    </div>
+    <div style="display: flex; gap: 8px; overflow: hidden">
+      <button type="button" aria-pressed="true" style="flex-shrink: 0; height: 34px; padding: 0 13px; border-radius: 999px; border: 0; background: #FFFFFF; color: #6D1030; font: inherit; font-size: 13px; font-weight: 700">Tout</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">Blancs</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">Bulles</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">Rouges</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">Doux &amp; mutés</button>
+      <button type="button" aria-pressed="false" style="flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500">À mesurer</button>
+    </div>
+  </div>
+
+  <div style="padding: 14px 16px 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px">
+    <sc-for list="{{ vins }}" as="w" hint-placeholder-count="12">
+      <a href="Fiche.dc.html" style="text-decoration: none; color: #1C1013; display: flex; flex-direction: column; gap: 6px">
+        <span style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 136px; padding: 0 8px; box-sizing: border-box; border-radius: 14px; background: {{ w.bg }}; color: {{ w.fg }}; text-align: center">
+          <sc-if value="{{ w.img }}" hint-placeholder-val="{{ true }}">
+            <img src="{{ w.img }}" alt="{{ w.alt }}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 14px; display: block">
+          </sc-if>
+          <sc-if value="{{ w.gen }}" hint-placeholder-val="{{ false }}">
+            <span style="font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 15px; line-height: 1.1">{{ w.court }}</span>
+            <span style="font-family: 'Fraunces', Georgia, serif; font-style: italic; font-size: 12px; opacity: 0.85">{{ w.an }}</span>
+          </sc-if>
+          <span aria-label="{{ w.aria }}" style="position: absolute; top: 7px; left: 7px; min-width: 26px; height: 26px; padding: 0 5px; box-sizing: border-box; border-radius: 13px; background: #6D1030; border: 2px solid #FFFFFF; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 13px">{{ w.n }}</span>
+          <span role="img" aria-label="{{ w.type }}" style="position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; background: {{ w.dot }}; border: 2px solid #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.3); display: block">
+            <sc-if value="{{ w.bulles }}" hint-placeholder-val="{{ false }}">
+              <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" style="display: block"><circle cx="7" cy="12.5" r="1.7" fill="#FFFFFF"></circle><circle cx="12.5" cy="9" r="1.4" fill="#FFFFFF"></circle><circle cx="9" cy="6" r="1.1" fill="#FFFFFF"></circle></svg>
+            </sc-if>
+          </span>
+          <span style="position: absolute; bottom: 8px; left: 8px; display: flex; align-items: center; gap: 5px">
+          <span role="img" aria-label="{{ w.pays }}" style="width: 22px; height: 22px; border-radius: {{ flagRadius }}; overflow: hidden; box-shadow: 0 0 0 1.5px #FFFFFF, 0 1px 4px rgba(0,0,0,0.3); display: block; flex-shrink: 0">
+            <svg width="22" height="22" viewBox="0 0 24 24" preserveAspectRatio="none" aria-hidden="true" style="display: block">
+              <sc-for list="{{ w.flag.r }}" as="r" hint-placeholder-count="3">
+                <rect x="{{ r.x }}" y="{{ r.y }}" width="{{ r.w }}" height="{{ r.h }}" fill="{{ r.f }}"></rect>
+              </sc-for>
+              <sc-for list="{{ w.flag.p }}" as="p" hint-placeholder-count="0">
+                <polygon points="{{ p.pts }}" fill="{{ p.f }}"></polygon>
+              </sc-for>
+            </svg>
+          </span>
+          <sc-if value="{{ w.note }}" hint-placeholder-val="{{ true }}">
+            <span aria-label="Note {{ w.note }} sur 5" style="height: 22px; padding: 0 7px; border-radius: 11px; background: #FFFFFF; color: #1C1013; display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.25)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="#6D1030" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4.1 4 1 5.6-5-2.6-5 2.6 1-5.6-4.1-4 5.6-.8z"></path></svg>{{ w.note }}
+            </span>
+          </sc-if>
+          </span>
+        </span>
+        <span style="font-size: 12.5px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 31px">{{ w.nom }}</span>
+        <span style="font-size: 11.5px; color: #5E4F55; margin-top: -3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ w.info }}</span>
+      </a>
+    </sc-for>
+  </div>
+
+  <nav aria-label="Navigation principale" style="position: absolute; left: 0; right: 0; bottom: 0; height: 82px; background: #FFFFFF; border-top: 1px solid #EADFE2; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: start; padding-top: 10px">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #6B5C62; font-size: 11px; font-weight: 500">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8l-.5 6a3.5 3.5 0 0 1-7 0L8 3z"></path><path d="M12 12.5V20"></path><path d="M8.5 20h7"></path></svg>Ce soir</a>
+    <a href="Cave.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #6D1030; font-size: 11px; font-weight: 700">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"></rect></svg>Cave</a>
+    <a href="Scan.dc.html" aria-label="Scanner une étiquette" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #6D1030; font-size: 11px; font-weight: 700; margin-top: -30px">
+      <span style="width: 58px; height: 58px; border-radius: 29px; background: #6D1030; box-shadow: 0 8px 20px rgba(109,16,48,0.35); display: flex; align-items: center; justify-content: center; color: #FFFFFF; border: 4px solid #FFFFFF">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"></path><path d="M8 12h8"></path></svg>
+      </span>Scanner</a>
+    <a href="Mesure.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #6B5C62; font-size: 11px; font-weight: 500">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4.1 4 1 5.6-5-2.6-5 2.6 1-5.6-4.1-4 5.6-.8z"></path></svg>Dégustations</a>
+    <a href="Casier.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #6B5C62; font-size: 11px; font-weight: 500">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"></rect><path d="M4 9.5h16M4 15h16"></path></svg>Rangements</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"drapeau":{"editor":"enum","options":["rond","carré"],"default":"rond"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  star(cx, cy, R, r) {
+    var pts = [];
+    for (var i = 0; i < 10; i++) {
+      var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r : R;
+      pts.push((cx + rr * Math.cos(a)).toFixed(2) + ',' + (cy + rr * Math.sin(a)).toFixed(2));
+    }
+    return pts.join(' ');
+  }
+  octo(cx, cy, r) {
+    var pts = [];
+    for (var i = 0; i < 8; i++) { var a = i * Math.PI / 4; pts.push((cx + r * Math.cos(a)).toFixed(2) + ',' + (cy + r * Math.sin(a)).toFixed(2)); }
+    return pts.join(' ');
+  }
+  renderVals() {
+    function R(x, y, w, h, f) { return { x: x, y: y, w: w, h: h, f: f }; }
+    var F = {
+      FR: { nom: 'France', r: [R(0, 0, 8, 24, '#0055A4'), R(8, 0, 8, 24, '#FFFFFF'), R(16, 0, 8, 24, '#EF4135')], p: [] },
+      IT: { nom: 'Italie', r: [R(0, 0, 8, 24, '#009246'), R(8, 0, 8, 24, '#FFFFFF'), R(16, 0, 8, 24, '#CE2B37')], p: [] },
+      ES: { nom: 'Espagne', r: [R(0, 0, 24, 6, '#AA151B'), R(0, 6, 24, 12, '#F1BF00'), R(0, 18, 24, 6, '#AA151B')], p: [] },
+      CL: { nom: 'Chili', r: [R(0, 0, 24, 12, '#FFFFFF'), R(0, 12, 24, 12, '#D52B1E'), R(0, 0, 10, 12, '#0039A6')], p: [{ pts: this.star(5, 6, 3.2, 1.3), f: '#FFFFFF' }] },
+      DE: { nom: 'Allemagne', r: [R(0, 0, 24, 8, '#000000'), R(0, 8, 24, 8, '#DD0000'), R(0, 16, 24, 8, '#FFCE00')], p: [] },
+      PT: { nom: 'Portugal', r: [R(0, 0, 9.6, 24, '#046A38'), R(9.6, 0, 14.4, 24, '#DA291C')], p: [{ pts: this.octo(9.6, 12, 4), f: '#FFE900' }] }
+    };
+    var S = {
+      rouge: { dot: '#7A1530', bg: '#5C1027', fg: '#FFFFFF', t: 'Rouge' },
+      blanc: { dot: '#E7CF7A', bg: '#F3EACB', fg: '#3A2E12', t: 'Blanc sec' },
+      jaune: { dot: '#C8961E', bg: '#E9C562', fg: '#3A2A05', t: 'Vin jaune, oxydatif' },
+      liquoreux: { dot: '#D49A2A', bg: '#E7B04C', fg: '#3A2405', t: 'Liquoreux' },
+      champagne: { dot: '#E7CF7A', bg: '#EFE3B8', fg: '#3A2E12', t: 'Effervescent blanc', b: true },
+      champRose: { dot: '#EFA3B4', bg: '#F6CFD7', fg: '#4A1424', t: 'Effervescent rosé', b: true },
+      prosecco: { dot: '#C9DD8E', bg: '#E4EDC6', fg: '#2A3410', t: 'Effervescent, cuve close', b: true },
+      mute: { dot: '#4E0E22', bg: '#3E0B1B', fg: '#FFFFFF', t: 'Muté' }
+    };
+    function v(nom, court, an, info, n, s, pays, img, note) {
+      var st = S[s], fl = F[pays];
+      return {
+        nom: nom, court: court, an: an, info: info, n: n, bg: st.bg, fg: st.fg, dot: st.dot, bulles: !!st.b,
+        type: st.t, pays: fl.nom, flag: fl, img: img || '', gen: !img, note: note || '', alt: 'Étiquette ' + nom,
+        aria: n + (n > 1 ? ' bouteilles' : ' bouteille')
+      };
+    }
+    var rond = (this.props.drapeau ?? 'rond') === 'rond';
+    return {
+      flagRadius: rond ? '11px' : '4px',
+      vins: [
+        v('Castillo Ygay Gran Reserva 2012', 'Castillo Ygay', '2012', 'Rioja · apogée', 1, 'rouge', 'ES', '', '4,5'),
+        v('Château-Chalon 2014', 'Château-Chalon', '2014', 'Jura · jeunesse', 1, 'jaune', 'FR'),
+        v('Château Lanessan 1996', '', '', 'Haut-Médoc · déclin', 1, 'rouge', 'FR', '/_blob/c2efd3a1ac87b72229d94326e17505ed'),
+        v('Clos des Américains 2009', '', '', 'Costières · déclin', 2, 'rouge', 'FR', '/_blob/6e974852561284af271f1cbd0dff9675', '3'),
+        v('Cuvée du Comte 2019', '', '', 'Côtes du Rhône · déclin', 2, 'rouge', 'FR', '/_blob/37283ec54da37e94f33076795c771610', '3'),
+        v('Domaine de Peyre Brune 2019', '', '', 'Ardèche · déclin', 3, 'rouge', 'FR', '/_blob/300abaaa04b37655173dadf394fd416f', '4'),
+        v('La Grise 2018', '', '', 'CdR Villages · déclin', 5, 'rouge', 'FR', '/_blob/97be70ea90baca572631415f39832cde', '4'),
+        v('Meursault 1er cru Les Perrières 2019', 'Meursault', '2019', 'Bourgogne · apogée', 3, 'blanc', 'FR'),
+        v('Prestige Pont Sevillano', '', '', 'Champagne · déclin', 1, 'champagne', 'FR', '/_blob/6606404fd5e31dcffacc0ec3ffc7a66d', '3,5'),
+        v('Le Chant des Sorcières 2019', '', '', 'Plan de Dieu · déclin', 1, 'rouge', 'FR', '/_blob/51406174e25d459cb10cb85c52347d22', '4,5'),
+        v('La Pièce du Boucher 2019', '', '', 'Pays d’Oc · apogée', 4, 'rouge', 'FR', '/_blob/0c6ab6c2b39499e700fc139f1a75bbe5'),
+        v('Prosecco Superiore Valdobbiadene 2023', 'Valdobbiadene', '2023', 'Vénétie · à boire jeune', 6, 'prosecco', 'IT')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
