@@ -8,5 +8,6 @@ import rangements from '../modules/rangements/module.js';
 import aide from '../modules/aide/module.js';
 import myoenoSpiritueux from '../modules/myoeno-spiritueux/module.js';
 import diagnostic from '../modules/diagnostic/module.js';
+import montrouge from '../modules/montrouge/module.js';
 
-export const MODULES = [ceSoir, cave, scanner, degustations, myoenoSpiritueux, rangements, aide, diagnostic];
+export const MODULES = [ceSoir, cave, scanner, degustations, myoenoSpiritueux, rangements, montrouge, aide, diagnostic];

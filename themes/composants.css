@@ -197,3 +197,17 @@ a.bouton { text-decoration: none; }
 .journal li.erreur { color: var(--c-declin); }
 [data-carte="diagnostic"] { margin-bottom: 12px; }
 .notes-texte { white-space: pre-line; }
+
+/* Casier connecté */
+.emplacement.inconnue { border: 2px dashed var(--c-accent); color: var(--c-accent); font-size: 16px; }
+.case.etat-retiree .emplacement { opacity: .35; outline: 2px dashed var(--c-declin); outline-offset: 1px; }
+.legende-casier { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--c-texte-2); margin-top: 8px; padding-left: 34px; }
+.legende-casier > span { display: inline-flex; align-items: center; gap: 6px; }
+.emplacement.mini { width: 16px; height: 16px; font-size: 10px; }
+.retiree-exemple { background: var(--c-bord-fort); opacity: .35; outline: 2px dashed var(--c-declin); }
+.rangement-assiste select, .panneau-casier select { width: 100%; height: 44px; border-radius: 12px; border: 1.5px solid var(--c-bord-fort); padding: 0 10px; font: inherit; background: var(--c-surface); color: var(--c-texte); }
+.rangement-assiste p { margin: 6px 0 0; }
+.panneau-casier .carte { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.experimental { margin-top: 12px; }
+.experimental p { margin: 4px 0 8px; }
+.bouton:disabled { opacity: .45; cursor: not-allowed; }
