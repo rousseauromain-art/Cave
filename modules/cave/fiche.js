@@ -113,7 +113,7 @@ export async function ecranFiche(core, el, { id }) {
       h('div', { class: 'boutons' }, actionPrincipale),
       h('div', { class: 'ajout-stock' }, quantite, choixRangement, h('button', { type: 'button', class: 'bouton', onclick: ajouter }, '+ Ajouter')),
       message),
-    section(core, 'profil', p.profil === 'vin' ? 'Profil MyOeno' : 'Dégustations', p.mesure ? `${nbMesures} mesure${nbMesures > 1 ? 's' : ''}` : 'à mesurer',
+    section(core, 'profil', p.profil === 'vin' ? 'Profil MyOeno' : 'Dégustations', p.mesure ? `${nbMesures} mesure${nbMesures > 1 ? 's' : ''}` : p.profil === 'vin' ? 'à mesurer' : `${motsFiche.length ? 'dégusté' : 'à déguster'}`,
       p.mesure
         ? h('div', { class: 'profil-fiche' },
           radar(p.mesure, { taille: 220, fantome: moyStyle, legende: moyStyle ? 'la moyenne de vos vins du même style' : '' }),
@@ -145,8 +145,9 @@ export async function ecranFiche(core, el, { id }) {
             temp ? h('p', { class: 'discret' }, `Service à ${temp[0]}–${temp[1]} °C`) : null)),
         h('a', { href: `#/servir/${p.id}`, class: 'bouton principal' }, 'Préparer le service'));
     })() : null,
-    section(core, 'notes', 'Notes', p.commentaire ? '' : 'vide',
-      h('p', {}, p.commentaire || 'Aucune note.'))
+    section(core, 'notes', 'Notes', p.commentaire || p.extra?.lien ? '' : 'vide',
+      h('p', { class: 'notes-texte' }, p.commentaire || 'Aucune note.'),
+      p.extra?.lien && /^https:\/\//.test(p.extra.lien) ? h('a', { href: p.extra.lien, target: '_blank', rel: 'noopener noreferrer' }, 'Fiche du producteur ↗') : null)
   ];
 
   el.append(

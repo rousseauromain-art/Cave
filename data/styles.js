@@ -13,7 +13,7 @@ export const STYLES = {
     mute: { titre: 'Muté', pastille: '#4E0E22', fond: '#3E0B1B', texte: '#FFFFFF' }
   },
   spiritueux: {
-    tourbe: { titre: 'Single malt tourbé', pastille: '#3A2A1E', fond: '#4A3626', texte: '#FFFFFF' },
+    tourbe: { titre: 'Single malt tourbé', pastille: '#2A1D14', fond: '#6A5040', texte: '#FFFFFF' },
     malt: { titre: 'Single malt', pastille: '#C98A2B', fond: '#E2B465', texte: '#2B1A08' },
     sherry: { titre: 'Fût de sherry', pastille: '#7A2E14', fond: '#8E3A1C', texte: '#FFFFFF' },
     blend: { titre: 'Blend', pastille: '#D9A441', fond: '#EBCB86', texte: '#2B1A08' },

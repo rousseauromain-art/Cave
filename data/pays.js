@@ -2,7 +2,7 @@
 export const PAYS_PAR_NOM = {
   france: 'FR', italie: 'IT', espagne: 'ES', allemagne: 'DE', portugal: 'PT', chili: 'CL',
   ecosse: 'SC', 'écosse': 'SC', bretagne: 'BZH', japon: 'JP', 'etats-unis': 'US', 'états-unis': 'US', usa: 'US',
-  venezuela: 'VE', irlande: 'IE'
+  venezuela: 'VE', irlande: 'IE', canada: 'CA', russie: 'RU', cuba: 'CU'
 };
 
 export function codePays(nom) {
