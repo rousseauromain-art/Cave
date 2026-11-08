@@ -10,7 +10,7 @@ begin
   return new;
 end $$;
 
-create table public.rangements (
+create table if not exists public.rangements (
   id          uuid primary key,
   user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
   nom         text not null,
@@ -24,7 +24,7 @@ create table public.rangements (
   sync_at     timestamptz not null default now()
 );
 
-create table public.produits (
+create table if not exists public.produits (
   id            uuid primary key,
   user_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
   profil        text not null check (profil in ('vin', 'spiritueux')),
@@ -51,7 +51,7 @@ create table public.produits (
   sync_at       timestamptz not null default now()
 );
 
-create table public.bouteilles (
+create table if not exists public.bouteilles (
   id            uuid primary key,
   user_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
   produit_id    uuid not null references public.produits (id) on delete cascade,
@@ -69,7 +69,7 @@ create table public.bouteilles (
   sync_at       timestamptz not null default now()
 );
 
-create table public.mesures (
+create table if not exists public.mesures (
   id          uuid primary key,
   user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
   produit_id  uuid references public.produits (id) on delete set null,  -- null = verre non rattaché
@@ -86,7 +86,7 @@ create table public.mesures (
   sync_at     timestamptz not null default now()
 );
 
-create table public.degustations (
+create table if not exists public.degustations (
   id           uuid primary key,
   user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
   produit_id   uuid references public.produits (id) on delete cascade,
@@ -102,20 +102,22 @@ create table public.degustations (
 );
 
 -- Même traitement pour toutes les tables : droits explicites (l'exposition automatique est désactivée),
--- RLS propriétaire, trigger de synchro, index de curseur.
+-- RLS propriétaire, trigger de synchro, index de curseur. Relançable sans erreur.
 do $$
 declare t text;
 begin
   foreach t in array array['rangements', 'produits', 'bouteilles', 'mesures', 'degustations'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('grant select, insert, update, delete on public.%I to authenticated', t);
+    execute format('drop policy if exists proprietaire on public.%I', t);
     execute format(
       'create policy proprietaire on public.%I for all to authenticated '
       'using (user_id = auth.uid()) with check (user_id = auth.uid())', t);
+    execute format('drop trigger if exists %I on public.%I', t || '_sync', t);
     execute format(
       'create trigger %I before insert or update on public.%I '
       'for each row execute function public.touch_sync()', t || '_sync', t);
-    execute format('create index %I on public.%I (user_id, sync_at)', t || '_sync_idx', t);
+    execute format('create index if not exists %I on public.%I (user_id, sync_at)', t || '_sync_idx', t);
   end loop;
 end $$;
 
@@ -124,6 +126,7 @@ insert into storage.buckets (id, name, public)
 values ('etiquettes', 'etiquettes', false)
 on conflict (id) do nothing;
 
+drop policy if exists etiquettes_proprietaire on storage.objects;
 create policy etiquettes_proprietaire on storage.objects for all to authenticated
   using (bucket_id = 'etiquettes' and (storage.foldername(name))[1] = auth.uid()::text)
   with check (bucket_id = 'etiquettes' and (storage.foldername(name))[1] = auth.uid()::text);
