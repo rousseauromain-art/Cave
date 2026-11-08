@@ -1,5 +1,6 @@
 // Règles métier de l'inventaire, partagées par les modules Cave, Rangements, Ce soir, Dégustations.
 import { STYLES } from '../data/styles.js';
+import { chargerTable, estimer, phase, PHASES } from './apogee.js';
 
 export const EN_CAVE = ['stock', 'ouverte'];
 
@@ -16,13 +17,13 @@ export function infoCourte(p) {
   if (p.profil === 'spiritueux') {
     return [p.region, p.degre ? `${String(p.degre).replace('.', ',')} %` : null, p.age_ans ? `${p.age_ans} ans` : null].filter(Boolean).join(' · ');
   }
-  return [p.appellation || p.region, p.millesime].filter(Boolean).join(' · ');
+  return [p.appellation || p.region, p.millesime, p.phase ? PHASES[p.phase].toLowerCase() : null].filter(Boolean).join(' · ');
 }
 
 // Produits du profil enrichis : bouteilles en cave, stock, dernière mesure, rangements.
 export async function inventaire(store, profil) {
-  const [produits, bouteilles, mesures] = await Promise.all([
-    store.list('produits'), store.list('bouteilles'), store.list('mesures')
+  const [produits, bouteilles, mesures, table] = await Promise.all([
+    store.list('produits'), store.list('bouteilles'), store.list('mesures'), chargerTable()
   ]);
   const enCave = new Map();
   for (const b of bouteilles) {
@@ -38,7 +39,14 @@ export async function inventaire(store, profil) {
     .filter((p) => !profil || p.profil === profil)
     .map((p) => {
       const bt = (enCave.get(p.id) || []).sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0));
-      return { ...p, bouteilles: bt, stock: bt.length, mesure: mesure.get(p.id) || null, styleInfo: styleDe(p) };
+      // Apogée : années saisies, sinon estimation par la table (vin uniquement).
+      const est = p.profil === 'vin' && !p.apogee_debut ? estimer(p, table) : null;
+      const debut = p.apogee_debut || est?.debut || null, fin = p.apogee_fin || est?.fin || null;
+      return {
+        ...p, bouteilles: bt, stock: bt.length, mesure: mesure.get(p.id) || null, styleInfo: styleDe(p),
+        apogee: debut ? { debut, fin, estimee: !!est, source: est?.source || p.extra?.apogee_source || null } : null,
+        phase: p.profil === 'vin' ? phase(debut, fin) : null
+      };
     })
     .sort((a, b) => (b.stock > 0) - (a.stock > 0) || a.nom.localeCompare(b.nom, 'fr'));
 }
