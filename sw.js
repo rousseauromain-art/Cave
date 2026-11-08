@@ -1,5 +1,5 @@
 // Service worker : l'app s'ouvre hors ligne. Réseau d'abord (mises à jour immédiates), cache en secours.
-const VERSION = '0.5.0'; // aligné sur core/version.js (vérifié par les tests)
+const VERSION = '0.6.0'; // aligné sur core/version.js (vérifié par les tests)
 const CACHE = `cave-${VERSION}`;
 const COQUILLE = [
   './', './index.html', './manifest.webmanifest',
@@ -8,11 +8,11 @@ const COQUILLE = [
   './core/kv.js', './core/evenements.js', './core/version.js', './core/config.js',
   './core/schema.js', './core/fusion.js', './core/store.js', './core/sync.js', './core/supabase.js', './core/sauvegarde.js',
   './core/inventaire.js', './core/photos.js', './core/import-v9.js', './core/cles.js', './core/identification.js', './data/apogee.json',
-  './core/ui/dom.js', './core/ui/icones.js', './core/ui/a-venir.js', './core/ui/badges.js', './core/ui/radar.js',
+  './core/ui/dom.js', './core/ui/icones.js', './core/ui/a-venir.js', './core/ui/badges.js', './core/ui/radar.js', './core/ui/courbe.js', './core/apogee.js',
   './data/styles.js', './data/drapeaux.js', './data/filtres.js', './data/pays.js',
   './modules/ce-soir/module.js', './modules/cave/module.js',
   './modules/cave/liste.js', './modules/cave/tuile.js', './modules/cave/fiche.js', './modules/cave/formulaire.js', './modules/scanner/module.js',
-  './modules/degustations/module.js', './modules/degustations/calcul.js', './modules/degustations/ble.js', './modules/degustations/donnees.js', './modules/myoeno-spiritueux/module.js', './modules/rangements/module.js', './modules/aide/module.js',
+  './modules/degustations/module.js', './modules/degustations/calcul.js', './modules/degustations/ble.js', './modules/degustations/donnees.js', './modules/myoeno-spiritueux/module.js', './modules/rangements/module.js', './modules/aide/module.js', './modules/diagnostic/module.js',
   './icons/icone.svg', './icons/icone-192.png', './icons/icone-512.png'
 ];
 

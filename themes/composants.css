@@ -169,3 +169,30 @@ section.carte textarea { width: 100%; border-radius: 12px; border: 1.5px solid v
 .puces-mots.lecture .puce-mot { cursor: default; height: 30px; }
 a.bouton.grand, .bouton.grand { width: 100%; text-decoration: none; }
 a.bouton { text-decoration: none; }
+
+/* Apogée, aération, Ce soir, service, diagnostic */
+.courbe { width: 100%; height: auto; display: block; }
+.courbe-bande { fill: var(--c-apogee); fill-opacity: .1; }
+.courbe-axe { stroke: var(--c-bord-fort); stroke-width: 1; }
+.courbe-trait { fill: none; stroke: var(--c-accent); stroke-width: 2.6; stroke-linecap: round; }
+.courbe-maintenant { stroke: var(--c-texte); stroke-width: 1; stroke-dasharray: 3 3; }
+.courbe-point { fill: var(--c-accent); stroke: #FFFFFF; stroke-width: 2; }
+.courbe-texte { font-size: 10.5px; fill: var(--c-texte-2); font-family: var(--police-texte); }
+.courbe-texte.fort { fill: var(--c-apogee); font-weight: 600; }
+.section-resume .statut { padding: 3px 9px; font-size: 12px; }
+.phrase.gauche { text-align: left; }
+.aeration-ligne { display: flex; align-items: center; gap: 14px; }
+.anneau-fond { fill: none; stroke: var(--c-bord); stroke-width: 7; }
+.anneau-arc { fill: none; stroke: var(--c-accent); stroke-width: 7; stroke-linecap: round; }
+.anneau-texte { font-family: var(--police-titre); font-weight: 700; font-size: 15px; fill: var(--c-texte); }
+.groupe-ce-soir { margin-bottom: 22px; }
+.groupe-ce-soir h2 { font-family: var(--police-titre); font-weight: 600; font-size: 21px; margin: 0 0 2px; }
+.groupe-ce-soir > p { margin: 0 0 10px; }
+.service { display: flex; flex-direction: column; gap: 10px; }
+.service h2 { margin: 0; }
+.service-ligne { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid var(--c-bord); padding-top: 10px; }
+.service-ligne input { height: 44px; border-radius: 12px; border: 1.5px solid var(--c-bord-fort); padding: 0 10px; font: inherit; font-size: 18px; background: var(--c-surface); color: var(--c-texte); }
+.grand-chiffre { font-family: var(--police-titre); font-size: 26px; font-weight: 700; }
+.journal { margin: 0; padding-left: 18px; font-size: 12px; max-height: 240px; overflow: auto; color: var(--c-texte-2); }
+.journal li.erreur { color: var(--c-declin); }
+[data-carte="diagnostic"] { margin-bottom: 12px; }
