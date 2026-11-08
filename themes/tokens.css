@@ -35,14 +35,19 @@ button { font: inherit; }
   background: var(--c-entete); color: var(--c-entete-texte);
   padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
 }
-.entete-ligne { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.entete h1 { margin: 0; font-family: var(--police-titre); font-weight: 600; font-size: 28px; line-height: 1.1; }
-.actions { display: flex; align-items: center; gap: 8px; }
+.entete-ligne { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.entete h1 { margin: 0; flex: 1; min-width: 0; font-family: var(--police-titre); font-weight: 600; font-size: 26px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .pilule {
   display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px;
   border-radius: 999px; border: 1px solid rgba(255,255,255,.3); background: transparent;
   color: var(--c-entete-texte); font-size: 13px; font-weight: 600; cursor: pointer;
 }
+.bascule-profil { position: relative; background: transparent; cursor: pointer; padding: 0; }
+/* Point de la couleur du profil cible : on voit vers quel thème on bascule. */
+.point-profil { position: absolute; right: 4px; bottom: 5px; width: 10px; height: 10px; border-radius: 5px; box-shadow: 0 0 0 2px var(--c-entete); }
+.bascule-profil[data-vers="spiritueux"] .point-profil { background: #C98A2B; }
+.bascule-profil[data-vers="vin"] .point-profil { background: #B0294F; }
 .bouton-rond {
   width: 40px; height: 40px; border-radius: 20px; border: 1px solid rgba(255,255,255,.3);
   display: inline-flex; align-items: center; justify-content: center; color: var(--c-entete-texte);
@@ -127,3 +132,27 @@ nav#nav {
 .statut.jeunesse { background: var(--c-jeunesse-fond); color: var(--c-jeunesse); }
 .statut.apogee { background: var(--c-apogee-fond); color: var(--c-apogee); }
 .statut.declin { background: var(--c-declin-fond); color: var(--c-declin); }
+
+/* Sauvegarde */
+.indicateur-sync { position: relative; }
+.point { width: 9px; height: 9px; border-radius: 5px; background: var(--c-texte-2); display: inline-block; flex-shrink: 0; }
+.indicateur-sync .point { position: absolute; right: 5px; bottom: 6px; box-shadow: 0 0 0 2px var(--c-entete); }
+[data-sync-etat="ok"] .point, .point[data-sync-etat="ok"] { background: #7BE0A8; }
+[data-sync-etat="attente"] .point, .point[data-sync-etat="attente"],
+[data-sync-etat="en-cours"] .point, .point[data-sync-etat="en-cours"] { background: var(--c-halo); }
+[data-sync-etat="erreur"] .point, .point[data-sync-etat="erreur"] { background: #E5533D; }
+.statut-sync { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0 0 12px; font-size: 14px; }
+.statut-sync .point { align-self: center; }
+.bloc { flex-basis: 100%; }
+.connexion { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.connexion label { font-weight: 600; font-size: 14px; }
+.connexion input { height: 44px; border-radius: 12px; border: 1.5px solid var(--c-bord-fort); padding: 0 12px; font: inherit; background: var(--c-surface); color: var(--c-texte); }
+.boutons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.bouton {
+  height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--c-accent); background: var(--c-surface);
+  color: var(--c-accent); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.bouton.principal { background: var(--c-accent); color: #FFFFFF; border-color: var(--c-accent); }
+.masque { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.message { margin: 4px 0 0; font-size: 13px; color: var(--c-texte-2); min-height: 1em; }
+.compte p { margin: 0 0 10px; }

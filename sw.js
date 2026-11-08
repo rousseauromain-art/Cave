@@ -1,11 +1,12 @@
 // Service worker : l'app s'ouvre hors ligne. Réseau d'abord (mises à jour immédiates), cache en secours.
-const VERSION = '0.1.0'; // aligné sur core/version.js (vérifié par les tests)
+const VERSION = '0.2.0'; // aligné sur core/version.js (vérifié par les tests)
 const CACHE = `cave-${VERSION}`;
 const COQUILLE = [
   './', './index.html', './manifest.webmanifest',
   './themes/tokens.css', './themes/vin.css', './themes/spiritueux.css',
   './core/app.js', './core/registry.js', './core/router.js', './core/flags.js', './core/theme.js',
   './core/kv.js', './core/evenements.js', './core/version.js', './core/config.js',
+  './core/schema.js', './core/fusion.js', './core/store.js', './core/sync.js', './core/supabase.js', './core/sauvegarde.js',
   './core/ui/dom.js', './core/ui/icones.js', './core/ui/a-venir.js', './core/ui/badges.js',
   './data/styles.js', './data/drapeaux.js',
   './modules/ce-soir/module.js', './modules/cave/module.js', './modules/scanner/module.js',
@@ -27,8 +28,9 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const memeOrigine = new URL(req.url).origin === location.origin;
-  const polices = /fonts\.(googleapis|gstatic)\.com$/.test(new URL(req.url).hostname);
-  if (!memeOrigine && !polices) return;
+  // Polices et bibliothèque Supabase mises en cache pour démarrer hors ligne ; l'API Supabase n'est jamais mise en cache.
+  const externe = /(^fonts\.(googleapis|gstatic)\.com|^cdn\.jsdelivr\.net)$/.test(new URL(req.url).hostname);
+  if (!memeOrigine && !externe) return;
   e.respondWith(
     fetch(req).then((rep) => {
       if (rep.ok) { const copie = rep.clone(); caches.open(CACHE).then((c) => c.put(req, copie)); }
