@@ -129,7 +129,7 @@ export function creerStore(nom = 'cave', { notifier = () => {} } = {}) {
           if (choisir(await brut.get(t, l.id), l) === 'distant') { await brut.put(t, { ...l, _sale: 1 }); n++; }
         }
       }
-      if (n) notifier({ table: '*', import: true });
+      if (n) notifier({ table: '*', distant: false });
       return n;
     },
 
