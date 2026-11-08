@@ -7,8 +7,10 @@ import { appliquer, profilCourant, basculerProfil, changerProfil, PROFILS } from
 import { aller, routeCourante, demarrer } from './router.js';
 import { h, icone, vider, ajouter } from './ui/dom.js';
 import { ICONES } from './ui/icones.js';
+import { initialiserSauvegarde } from './sauvegarde.js';
 
-const core = { h, icone, ajouter, ICONES, aller, sur, VERSION, profilCourant, basculerProfil };
+const sauvegarde = initialiserSauvegarde();
+const core = { h, icone, ajouter, ICONES, aller, sur, VERSION, profilCourant, basculerProfil, store: sauvegarde.store };
 
 const ecranReglages = {
   route: '/reglages', titre: 'Réglages', icone: ICONES.reglages, place: 'entete', ordre: 99,
@@ -46,10 +48,13 @@ function rendreEntete(ecran) {
   document.getElementById('titre').textContent = ecran.titre;
   const actions = vider(document.getElementById('actions'));
   const autre = profilCourant() === 'vin' ? 'spiritueux' : 'vin';
-  actions.append(h('button', {
-    type: 'button', class: 'pilule', 'data-test': 'bascule-profil',
-    'aria-label': `Passer au profil ${PROFILS[autre].titre}`, onclick: basculerProfil
-  }, PROFILS[autre].titre, icone(ICONES.bascule, 14)));
+  const bascule = h('button', {
+    type: 'button', class: 'bouton-rond bascule-profil', 'data-test': 'bascule-profil', 'data-vers': autre,
+    'aria-label': `Passer au profil ${PROFILS[autre].titre}`, title: PROFILS[autre].titre, onclick: basculerProfil
+  });
+  bascule.append(icone(ICONES.bascule, 18), h('span', { class: 'point-profil' }));
+  actions.append(bascule);
+  actions.append(sauvegarde.indicateur());
   for (const e of ecrans().filter((x) => x.place === 'entete')) {
     const b = h('a', { href: '#' + e.route, class: 'bouton-rond', 'aria-label': e.titre });
     b.append(icone(e.icone, 20));
@@ -74,6 +79,7 @@ function rendre() {
 
 function rendreReglages(el) {
   const profil = profilCourant();
+  sauvegarde.carte(el);
   el.append(
     h('section', { class: 'carte' },
       h('h2', {}, 'Profil'),
@@ -103,11 +109,15 @@ function rendreReglages(el) {
 
 for (const m of MODULES) m.init?.(core);
 appliquer();
+// Retour d'un lien de connexion : laisser Supabase lire le jeton avant que le routeur ne réécrive l'URL.
+const retourLien = /access_token=|error_description=/.test(location.hash);
+if (retourLien) await sauvegarde.demarrer();
 demarrer();
 sur('route', rendre);
 sur('flags', rendre);
 sur('profil', rendre);
 rendre();
+if (!retourLien) sauvegarde.demarrer();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
