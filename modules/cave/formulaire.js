@@ -5,6 +5,7 @@ import { DRAPEAUX } from '../../data/drapeaux.js';
 import { ajouterBouteilles, aGrille, emplacementsLibres } from '../../core/inventaire.js';
 import { compresser, urlPhoto, oublierPhoto } from '../../core/photos.js';
 import { prendreBrouillon } from '../../core/identification.js';
+import { FORMES, formeDe, silhouette } from '../../core/ui/etagere.js';
 
 function champ(h, libelle, controle, aide) {
   return h('label', { class: 'champ' }, h('span', { class: 'libelle' }, libelle), controle, aide ? h('span', { class: 'discret' }, aide) : null);
@@ -41,6 +42,13 @@ export async function ecranFormulaire(core, el, { id }) {
   });
 
   const vin = profil === 'vin';
+  // Forme de la bouteille (dessin du bar) : choisie ici seulement, à la création ou en modification.
+  const forme = h('input', { type: 'hidden', name: 'forme', value: formeDe(p) });
+  const choixForme = vin ? null : h('div', { class: 'champ' }, h('span', { class: 'libelle' }, 'Forme de la bouteille (vue du bar)'),
+    h('div', { class: 'formes', role: 'group', 'aria-label': 'Forme de la bouteille' }, Object.entries(FORMES).map(([k, f]) => h('button', {
+      type: 'button', 'aria-pressed': String(k === forme.value), 'data-forme': k,
+      onclick: (e) => { forme.value = k; for (const b of e.currentTarget.parentNode.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); }
+    }, silhouette(k), f.titre))), forme);
   const form = h('form', { class: 'formulaire carte', novalidate: true },
     source ? h('p', { class: 'discret' }, `Prérempli par ${source} : vérifiez avant d\u2019enregistrer.`) : null,
     h('div', { class: 'photo-ligne' }, apercu, champ(h, 'Photo de l’étiquette', photo)),
@@ -60,6 +68,7 @@ export async function ecranFormulaire(core, el, { id }) {
         champ(h, 'Degré (% vol.)', entree('degre', { type: 'number', inputmode: 'decimal', step: '0.1', min: '0', max: '80' })),
         champ(h, 'Contenance (cl)', h('input', { name: 'volume_cl', type: 'number', inputmode: 'numeric', min: '5', max: '300', value: String(p.extra?.volume_cl ?? 70) }))),
     vin ? null : champ(h, 'Fût', entree('fut')),
+    choixForme,
     vin ? h('div', { class: 'deux' },
       champ(h, 'Apogée de', entree('apogee_debut', { type: 'number', inputmode: 'numeric', min: '1900', max: '2200' })),
       champ(h, 'à', entree('apogee_fin', { type: 'number', inputmode: 'numeric', min: '1900', max: '2200' }))) : null,
@@ -109,7 +118,7 @@ export async function ecranFormulaire(core, el, { id }) {
       fut: d.fut?.trim() || null, apogee_debut: nombre(d.apogee_debut), apogee_fin: nombre(d.apogee_fin),
       note: d.note === '' ? null : Math.max(0, Math.min(5, Number(d.note))), commentaire: d.commentaire?.trim() || null,
       photo_path: nouvellePhoto ? null : p.photo_path ?? null,
-      extra: vin ? p.extra ?? {} : { ...(p.extra || {}), volume_cl: Number(d.volume_cl) || 70 }
+      extra: vin ? p.extra ?? {} : { ...(p.extra || {}), volume_cl: Number(d.volume_cl) || 70, forme: d.forme || null }
     });
     if (nouvellePhoto) {
       await core.store.enregistrerPhoto(produit.id, nouvellePhoto);

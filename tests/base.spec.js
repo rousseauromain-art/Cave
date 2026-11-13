@@ -49,14 +49,15 @@ test('S7-02 whisky rangé dans un rangement existant (groupé puis bouteille par
   await page.getByLabel('Ranger les bouteilles sans rangement dans').selectOption({ label: 'Étagère bar' });
   await page.getByRole('button', { name: 'Ranger les 2' }).click();
   await expect(enCave(page)).toHaveText([/Étagère bar/, /Étagère bar/]);
-  // Déplacer la 2e bouteille dans le casier, à un emplacement précis
+  // Déplacer la 2e bouteille dans le bar (pas d'emplacement précis : le bar est une vue de l'inventaire)
   await page.getByRole('button', { name: /^Modifier la bouteille/ }).nth(1).click();
   const options = await page.locator('.editeur-bouteille').getByLabel(/^Rangement de la bouteille/).locator('option').allTextContents();
   expect(options).not.toContain('Petit casier'); // casier à vin non proposé pour un whisky
   await page.locator('.editeur-bouteille').getByLabel(/^Rangement de la bouteille/).selectOption({ label: 'Bar test' });
-  await page.locator('.editeur-bouteille select[aria-label="Emplacement"]').selectOption({ label: 'Étagère 1 · place 2' });
+  await expect(page.locator('.editeur-bouteille select[aria-label="Emplacement"]')).toHaveCount(0);
   await page.locator('.editeur-bouteille').getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(enCave(page).nth(1)).toContainText('Bar test · Étagère 1 · place 2');
+  await expect(enCave(page).nth(1)).toContainText('Bar test');
+  await expect(page.getByRole('link', { name: /Localiser la bouteille/ })).toHaveCount(1);
   await page.goto(`./#/rangement/${await id(page, 'etagere')}`);
   await expect(page.locator('#vue')).toContainText('Whisky Test');
 });
@@ -120,26 +121,58 @@ test('S7-07 création d’un doublon : la fiche existante est proposée', async 
   await expect(page.locator('.compteur-stock')).toContainText('3 bouteilles');
 });
 
-test('S8-01 bar : étagères, silhouettes, liquide au niveau, comptoir, halo de recherche', async ({ page }) => {
+test('S9-01 bar en lecture seule : étagères par pays, 6 par planche, nom et niveau, halo, autres regroupements', async ({ page }) => {
   await page.evaluate(async () => {
     const { creerStore } = await import('/core/store.js');
+    const { ajouterBouteilles } = await import('/core/inventaire.js');
     const s = creerStore('cave');
     const bt = (await s.list('bouteilles')).filter((b) => b.produit_id === window.ids.whisky);
     await s.put('bouteilles', { ...bt[0], rangement_id: window.ids.bar, emplacement: 'R2-E1', etat: 'ouverte', niveau: 25 });
-    await s.put('bouteilles', { ...bt[1], rangement_id: window.ids.bar, emplacement: null });
+    await s.put('bouteilles', { ...bt[1], rangement_id: window.ids.bar });
+    const j = await s.put('produits', { profil: 'spiritueux', nom: 'Nikka Test', style: 'blend', pays: 'JP', extra: { forme: 'ronde' } });
+    await ajouterBouteilles(s, j.id, 1, { rangement_id: window.ids.bar });
+    const b = await s.put('produits', { profil: 'spiritueux', nom: 'Breton Test', style: 'tourbe', pays: 'BZH' });
+    await ajouterBouteilles(s, b.id, 7, { rangement_id: window.ids.bar });
   });
   await page.goto('./#/rangements');
   await page.locator('[data-profil-choix="spiritueux"]').click();
-  await expect(page.getByText('Bar test')).toBeVisible();
   await expect(page.getByText('Petit casier')).toHaveCount(0); // rangement de la collection Vins
   await page.getByText('Bar test').click();
-  await expect(page.locator('.bar-rangee .bar-titre')).toHaveText(['Étagère 1', 'Étagère 2', 'Sur le comptoir · à placer']);
-  await expect(page.getByRole('button', { name: /Bouteille \d+, Whisky Test, Étagère 1 · place 1, reste 25 %/ })).toBeVisible();
+  // Pays : le plus fourni d'abord ; 7 bouteilles bretonnes = 2 planches de 6
+  await expect(page.locator('.bar-entete strong')).toHaveText(['Bretagne', 'Écosse', 'Japon']);
+  await expect(page.locator('.bar-groupe').first().locator('.bar-planche-rang')).toHaveCount(2);
+  await expect(page.locator('.bar-planche-rang').first().locator('.bar-place')).toHaveCount(6);
+  await expect(page.getByRole('button', { name: /Whisky Test, reste ¼/ })).toBeVisible();
+  await expect(page.locator('.bar-groupe').nth(1).locator('.bar-nom')).toHaveText(['Whisky Test', 'Whisky Test']);
+  await expect(page.locator('.bar-groupe').nth(1).locator('.bar-niveau')).toHaveText(['¼', 'Pleine']);
+  // La forme choisie dans la fiche est dessinée
+  const formeNikka = await page.evaluate(async () => (await import('/core/ui/etagere.js')).FORMES.ronde.contour);
+  await expect(page.locator(`.bar-groupe:nth-child(3) path[d="${formeNikka}"]`).first()).toBeAttached();
+  // Recherche et sélection
   await page.getByLabel('Chercher un vin dans ce rangement').fill('whisky');
   await expect(page.locator('.bar-halo')).toHaveCount(2);
-  await page.getByRole('button', { name: /reste 25 %/ }).click();
+  await page.getByRole('button', { name: /reste ¼/ }).click();
   await expect(page.locator('.bar-halo')).toHaveCount(1);
-  await expect(page.locator('.bouteille-choisie')).toContainText('Étagère 1 · place 1');
+  await expect(page.locator('.bouteille-choisie')).toContainText('Écosse · reste ¼ · ≈ 4 verres');
+  // Autres regroupements
+  await page.getByRole('button', { name: 'Niveau', exact: true }).click();
+  await expect(page.locator('.bar-entete strong')).toHaveText(['Entamées', 'Pleines']);
+  await page.getByRole('button', { name: 'Catégorie', exact: true }).click();
+  await expect(page.locator('.bar-entete strong')).toHaveCount(3);
+});
+
+test('S9-02 forme de la bouteille choisie dans la fiche (création et modification)', async ({ page }) => {
+  await page.locator('[data-profil-choix="spiritueux"]').click();
+  await page.goto(`./#/produit/${await id(page, 'whisky')}/modifier`);
+  await expect(page.locator('.formes button[aria-pressed="true"]')).toHaveText('Haute');
+  await page.locator('.formes button[data-forme="carafe"]').click();
+  await expect(page.locator('.formes button[aria-pressed="true"]')).toHaveText('Carafe');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page).toHaveURL(/#\/fiche\//);
+  const forme = await page.evaluate(async (x) => (await (await import('/core/store.js')).creerStore('cave').get('produits', x)).extra.forme, await id(page, 'whisky'));
+  expect(forme).toBe('carafe');
+  await page.goto('./#/produit/nouveau');
+  await expect(page.locator('.formes button')).toHaveCount(6);
 });
 
 test('S8-02 création d\u2019un rangement : types et collection selon le profil', async ({ page }) => {
@@ -147,11 +180,10 @@ test('S8-02 création d\u2019un rangement : types et collection selon le profil'
   await page.locator('[data-profil-choix="spiritueux"]').click();
   await expect(page.locator('select[name="type"]')).toHaveValue('bar');
   const types = await page.locator('select[name="type"] option').allTextContents();
-  expect(types).toContain('Bar (étagères à bouteilles)');
+  expect(types).toContain('Bar');
   expect(types).not.toContain('Casier Montrouge (connecté)');
   await expect(page.locator('select[name="profil"]')).toHaveValue('spiritueux');
-  await expect(page.locator('input[name="lignes"]')).toHaveValue('3');
-  await expect(page.getByText('Bouteilles par étagère')).toBeVisible();
+  await expect(page.locator('input[name="lignes"]')).toBeHidden(); // le bar n'a pas de grille
   await page.getByLabel('Nom').fill('Vitrine salon');
   await page.locator('select[name="type"]').selectOption('vitrine');
   await page.getByRole('button', { name: 'Créer' }).click();

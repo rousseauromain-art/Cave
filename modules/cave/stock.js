@@ -1,16 +1,11 @@
 // Section « Stock & rangement » de la fiche : quantité (− / +), bouteille par bouteille (rangement, emplacement,
 // état, niveau), rangement groupé, historique des sorties. Chaque action peut être annulée.
-import { ajouterBouteilles, sortirBouteille, aGrille, emplacementsLibres, EN_CAVE } from '../../core/inventaire.js';
+import { ajouterBouteilles, sortirBouteille, aGrille, emplacementsLibres, EN_CAVE, QUARTS, quartDe, libelleNiveau, versesRestants } from '../../core/inventaire.js';
 import { toast } from '../../core/ui/toast.js';
 import { remplacer } from '../../core/ui/dom.js';
-import { libelleEmplacement, visibleDans } from '../../core/rangements.js';
+import { libelleEmplacement, visibleDans, vueDe } from '../../core/rangements.js';
 
 const ETATS = { stock: 'En stock', ouverte: 'Ouverte', bue: 'Bue', offerte: 'Offerte' };
-// Niveau affiché au quart près.
-const QUARTS = [[100, 'Plein'], [75, '¾'], [50, '½'], [25, '¼'], [5, 'Fond']];
-const quartDe = (n) => (n <= 12 ? 5 : Math.round(n / 25) * 25);
-export const libelleNiveau = (n) => Object.fromEntries(QUARTS)[quartDe(n)];
-const versesRestants = (n, cl) => Math.max(0, Math.floor((n / 100) * cl / 4));
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 export async function contenuStock(core, p, rangements) {
@@ -131,7 +126,7 @@ export async function contenuStock(core, p, rangements) {
     const li = h('li', { class: 'bouteille' },
       h('span', { class: 'numero' }, `#${b.numero}`),
       h('span', { class: 'lieu' }, nomRangement(b), b.etat === 'ouverte' ? h('span', { class: 'discret' }, ` · ouverte, reste ${libelleNiveau(b.niveau ?? 100)}`) : null),
-      r && aGrille(r) && b.emplacement ? h('a', { href: `#/rangement/${r.id}?b=${b.numero}`, class: 'lien-localiser', 'aria-label': `Localiser la bouteille ${b.numero}` }, core.icone('<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>', 20)) : null,
+      r && ((aGrille(r) && b.emplacement) || vueDe(r) === 'bar') ? h('a', { href: `#/rangement/${r.id}?b=${b.numero}`, class: 'lien-localiser', 'aria-label': `Localiser la bouteille ${b.numero}` }, core.icone('<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>', 20)) : null,
       h('button', { type: 'button', class: 'lien-localiser', 'aria-label': `Modifier la bouteille ${b.numero}`, onclick: (e) => { const ouvert = e.currentTarget.closest('li').nextElementSibling?.classList.contains('editeur-bouteille'); if (ouvert) e.currentTarget.closest('li').nextElementSibling.remove(); else editeur(b, e.currentTarget.closest('li')); } },
         core.icone('<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>', 18)));
     return li;

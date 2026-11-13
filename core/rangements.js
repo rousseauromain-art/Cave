@@ -7,8 +7,9 @@ export const TYPES = {
   carton: { titre: 'Carton / caisse', grille: null, collection: 'mixte' },
   casier: { titre: 'Casier à bouteilles', grille: 'casier', collection: 'vin' },
   montrouge: { titre: 'Casier Montrouge (connecté)', grille: 'casier', collection: 'vin' },
-  bar: { titre: 'Bar (étagères à bouteilles)', grille: 'bar', collection: 'spiritueux' },
-  vitrine: { titre: 'Vitrine', grille: 'bar', collection: 'spiritueux' }
+  // Bar et vitrine : vue illustrée de l'inventaire (étagères par pays…), sans emplacement précis.
+  bar: { titre: 'Bar', grille: null, vue: 'bar', collection: 'spiritueux' },
+  vitrine: { titre: 'Vitrine', grille: null, vue: 'bar', collection: 'spiritueux' }
 };
 
 export const COLLECTIONS = { vin: 'Vins', spiritueux: 'Spiritueux', mixte: 'Vins et spiritueux' };
@@ -32,10 +33,12 @@ export function grilleDe(r) {
   return g && r.lignes > 0 && r.colonnes > 0 ? g : null;
 }
 
-// « R3-E2 » → « R3 · E2 » (casier) ou « Étagère 1 · place 2 » (bar, étagères numérotées du haut).
+// Vue du détail : 'bar' (illustration), 'casier' (grille de culs de bouteille) ou 'liste'.
+export function vueDe(r) {
+  return TYPES[r?.type]?.vue || (grilleDe(r) ? 'casier' : 'liste');
+}
+
+// Emplacement affiché seulement pour les rangements à grille (« R3-E2 »).
 export function libelleEmplacement(r, code) {
-  if (!code) return '';
-  const m = code.match(/^R(\d+)-E(\d+)$/);
-  if (!m || grilleDe(r) !== 'bar') return code;
-  return `Étagère ${r.lignes - Number(m[1]) + 1} · place ${m[2]}`;
+  return code && grilleDe(r) ? code : '';
 }
