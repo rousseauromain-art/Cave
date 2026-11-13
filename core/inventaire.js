@@ -105,3 +105,9 @@ export async function emplacementsLibres(store, rangement) {
 export function aGrille(rangement) {
   return !!grilleDe(rangement);
 }
+
+// Niveau d'une bouteille ouverte, au quart près ; verres de 4 cl restants.
+export const QUARTS = [[100, 'Plein'], [75, '¾'], [50, '½'], [25, '¼'], [5, 'Fond']];
+export const quartDe = (n) => (n <= 12 ? 5 : Math.round(n / 25) * 25);
+export const libelleNiveau = (n) => Object.fromEntries(QUARTS)[quartDe(n)];
+export const versesRestants = (n, cl) => Math.max(0, Math.floor((n / 100) * cl / 4));

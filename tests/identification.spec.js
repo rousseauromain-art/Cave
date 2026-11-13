@@ -34,6 +34,26 @@ test.describe('analyse sans navigateur', () => {
     expect(rapprocher({ nom: 'LA GRISE', texte: 'la grise cotes du rhone villages 2018', millesime: 2018 }, cave).map((p) => p.id)).toEqual(['a', 'c']);
     expect(rapprocher({ nom: 'Inconnu total', texte: '' }, cave)).toEqual([]);
   });
+
+  test('S9-03 Minervois : cépages, domaine « Famille de », contenance, couleur déduite, profil vin', async () => {
+    const { analyserTexte, profilProbable, trouverCepages } = await import(fichier('core/identification.js'));
+    const r = analyserTexte([
+      { texte: 'SYRAH · GRENACHE', hauteur: 14 }, { texte: 'MINERVOIS', hauteur: 40 }, { texte: 'APPELLATION D’ORIGINE PROTÉGÉE', hauteur: 10 },
+      { texte: 'La Combe des Bories', hauteur: 24 }, { texte: 'Famille de', hauteur: 14 }, { texte: 'Lorgeril', hauteur: 30 }, { texte: '1620', hauteur: 8 }, { texte: '75cl', hauteur: 8 }
+    ], [{ k: 'France > Languedoc-Roussillon > Minervois', dernier: 'minervois' }], 2026);
+    expect(r).toMatchObject({ nom: 'La Combe des Bories', producteur: 'Famille de Lorgeril', appellation: 'Minervois', cepages: 'Syrah, Grenache', style: 'rouge', styleDeduit: true, volume_cl: 75 });
+    expect(r.texte.split('\n')).toHaveLength(8);
+    expect(profilProbable(r.texte, { appellation: r.appellation })).toBe('vin');
+    expect(profilProbable('Single Malt Scotch Whisky 46 % vol')).toBe('spiritueux');
+    expect(profilProbable('Bonjour')).toBeNull();
+    expect(trouverCepages('Grenache blanc et grenache noir, Syrah').map((c) => c.nom)).toEqual(['Grenache Blanc', 'Grenache', 'Syrah']);
+  });
+
+  test('S9-04 rapprochement : les mots courants (famille, réserve…) ne suffisent pas', async () => {
+    const { rapprocher } = await import(fichier('core/identification.js'));
+    const cave = [{ id: 'eddu', nom: 'Eddu Sélection Famille Le Lay #2' }, { id: 'jm', nom: 'Rhum J.M Réserve Famille' }];
+    expect(rapprocher({ nom: 'La Combe des Bories', producteur: 'Famille de Lorgeril', texte: 'Famille de Lorgeril Réserve' }, cave)).toEqual([]);
+  });
 });
 
 test.describe('écran Scanner', () => {
@@ -102,5 +122,35 @@ test.describe('écran Scanner', () => {
     await page.goto('./#/scanner');
     await page.locator('#photo-scan').setInputFiles(path.join(__dirname, '../icons/icone-192.png'));
     await expect(page.getByRole('status').filter({ hasText: 'Identification impossible' })).toBeVisible();
+  });
+
+  test('S9-05 vin scanné en Spiritueux : bascule en Vins, cépages, verso, texte conservé dans la fiche', async ({ page }) => {
+    const lignes = (l) => ({ json: { ParsedResults: [{ TextOverlay: { Lines: l.map(([t, hh]) => ({ Words: t.split(' ').map((w) => ({ WordText: w, Height: hh })) })) } }] } });
+    let n = 0;
+    await page.route('https://api.ocr.space/**', (route) => route.fulfill(++n === 1
+      ? lignes([['SYRAH · GRENACHE', 14], ['MINERVOIS', 40], ['La Combe des Bories', 24], ['Famille de', 14], ['Lorgeril', 30], ['75cl', 8]])
+      : lignes([['Un vin aux arômes de fruits noirs et d’épices.', 12], ['A servir à 16 °C.', 12], ['13,5 % vol', 10]])));
+    await page.goto('./#/cave');
+    await page.locator('[data-profil-choix="spiritueux"]').click();
+    await page.goto('./#/scanner');
+    await page.locator('#photo-scan').setInputFiles(path.join(__dirname, '../icons/icone-192.png'));
+    await expect(page.locator('.bandeau-info')).toContainText('C’est un vin');
+    await expect(page.locator('html')).toHaveAttribute('data-profil', 'vin');
+    await expect(page.locator('.champs-lus')).toContainText('Famille de Lorgeril');
+    await expect(page.locator('.champs-lus')).toContainText('(déduit des cépages)');
+    await expect(page.locator('.cepages-lus .puce-mot')).toHaveText(['Syrah', 'Grenache']);
+    await expect(page.getByText('Aucun vin ressemblant dans votre cave.')).toBeVisible();
+    await page.locator('#photo-verso').setInputFiles(path.join(__dirname, '../icons/icone-192.png'));
+    await expect(page.getByRole('status').filter({ hasText: 'Verso lu par OCR.space' })).toBeVisible();
+    await expect(page.locator('.champs-lus')).toContainText('13.5 %');
+    await page.getByRole('button', { name: 'Créer la fiche de ce vin' }).click();
+    await expect(page.getByLabel('Cépages')).toHaveValue('Syrah, Grenache');
+    await expect(page.getByLabel('Notes')).toHaveValue(/fruits noirs/);
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page).toHaveURL(/#\/fiche\//);
+    await expect(page.locator('.cepages-fiche .puce-mot')).toHaveText(['Syrah', 'Grenache']);
+    await page.locator('[data-section="texte-lu"] summary, details:has-text("Texte de l’étiquette") summary').first().click();
+    await expect(page.locator('.texte-etiquette')).toContainText('MINERVOIS');
+    await expect(page.locator('.texte-etiquette')).toContainText('— Verso —');
   });
 });

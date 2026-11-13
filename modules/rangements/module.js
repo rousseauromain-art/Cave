@@ -1,11 +1,12 @@
 // Rangements : placards, étagères, casiers. Vue en grille (culs de bouteille) avec recherche et halo jaune.
 import { remplacer } from '../../core/ui/dom.js';
 import { ICONES } from '../../core/ui/icones.js';
-import { inventaire, aGrille, emplacementsGrille, emplacementsLibres, EN_CAVE } from '../../core/inventaire.js';
+import { inventaire, aGrille, emplacementsGrille, emplacementsLibres, EN_CAVE, libelleNiveau, versesRestants } from '../../core/inventaire.js';
 import { STYLES } from '../../data/styles.js';
-import { emplacement } from '../../core/ui/badges.js';
-import { TYPES, COLLECTIONS, typesPour, collectionDe, visibleDans, grilleDe, libelleEmplacement } from '../../core/rangements.js';
-import { dessinerEtagere } from '../../core/ui/etagere.js';
+import { emplacement, drapeau, pastille } from '../../core/ui/badges.js';
+import { DRAPEAUX } from '../../data/drapeaux.js';
+import { TYPES, COLLECTIONS, typesPour, collectionDe, visibleDans, libelleEmplacement, vueDe } from '../../core/rangements.js';
+import { dessinerBar } from '../../core/ui/etagere.js';
 const STYLE_INCONNU = { titre: 'Non précisé', fond: 'var(--c-bord-fort)', texte: 'var(--c-texte)' };
 
 async function contenu(store) {
@@ -33,10 +34,9 @@ async function ecranListe(core, el) {
   const majType = () => {
     const t = TYPES[type.value];
     dims.hidden = !t.grille;
-    const bar = t.grille === 'bar';
-    libLignes.textContent = bar ? 'Étagères' : 'Rangées';
-    libColonnes.textContent = bar ? 'Bouteilles par étagère' : 'Emplacements par rangée';
-    lignes.value = bar ? '3' : '8'; colonnes.value = bar ? '6' : '6';
+    libLignes.textContent = 'Rangées';
+    libColonnes.textContent = 'Emplacements par rangée';
+    lignes.value = '8'; colonnes.value = '6';
     if (t.collection !== 'mixte') collection.value = t.collection;
   };
   type.addEventListener('change', majType);
@@ -77,6 +77,14 @@ async function ecranListe(core, el) {
     form);
 }
 
+// Regroupements du bar : une étagère par pays, par catégorie ou par niveau.
+const REGROUPEMENTS = {
+  pays: { titre: 'Pays', cle: (b, p) => (p?.pays ? [p.pays, DRAPEAUX[p.pays]?.nom || p.pays, drapeau(p.pays, 22)] : ['?', 'Origine inconnue', null]), ordre: (a, b) => b.places.length - a.places.length },
+  categorie: { titre: 'Catégorie', cle: (b, p) => (p?.style ? [p.style, p.styleInfo?.titre || p.style, pastille(p.styleInfo)] : ['?', 'Non précisée', null]), ordre: (a, b) => b.places.length - a.places.length },
+  niveau: { titre: 'Niveau', cle: (b) => (b.etat === 'ouverte' ? ['a', 'Entamées', null] : ['b', 'Pleines', null]), ordre: (a, b) => a.titre.localeCompare(b.titre) }
+};
+let triBar = 'pays';
+
 const normaliser = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 async function ecranDetail(core, el, { id }) {
@@ -99,22 +107,20 @@ async function ecranDetail(core, el, { id }) {
 
   function dessiner() {
     const trouves = ici.filter(correspond);
-    if (grilleDe(r) === 'bar') {
-      const parEmplacement = new Map(ici.map((b) => [b.emplacement, b]));
-      const etageres = [];
-      for (let ligne = r.lignes; ligne >= 1; ligne--) {
-        const places = [];
-        for (let e = 1; e <= r.colonnes; e++) {
-          const code = `R${ligne}-E${e}`, b = parEmplacement.get(code);
-          places.push({ code, libelle: libelleEmplacement(r, code), bouteille: b || null, produit: b ? produits.get(b.produit_id) : null, trouve: b ? !!correspond(b) : false });
-        }
-        etageres.push({ titre: `Étagère ${r.lignes - ligne + 1}`, places });
+    if (vueDe(r) === 'bar') {
+      const groupes = new Map();
+      for (const b of ici) {
+        const p = produits.get(b.produit_id);
+        const [cle, titre, entete] = REGROUPEMENTS[triBar].cle(b, p);
+        if (!groupes.has(cle)) groupes.set(cle, { titre, entete, places: [] });
+        groupes.get(cle).places.push({ bouteille: b, produit: p, trouve: !!correspond(b) });
       }
-      const aPlacer = ici.filter((b) => !emplacementsGrille(r).includes(b.emplacement));
-      if (aPlacer.length) etageres.push({ titre: 'Sur le comptoir · à placer', places: aPlacer.map((b) => ({ code: null, libelle: 'à placer', bouteille: b, produit: produits.get(b.produit_id), trouve: !!correspond(b) })) });
-      remplacer(zone, h('div', { class: 'carte bar-carte' },
-        h('div', { class: 'grille-titre' }, h('strong', {}, 'Vue du bar'), h('span', { class: 'discret' }, 'Niveau réel · bouchon = catégorie')),
-        dessinerEtagere(etageres, { surChoix: (pl) => { choisi = pl.bouteille.numero; recherche = ''; champ.value = ''; dessiner(); } })));
+      const liste = [...groupes.entries()].sort(([ka, a], [kb, b]) => (ka === '?') - (kb === '?') || REGROUPEMENTS[triBar].ordre(a, b) || a.titre.localeCompare(b.titre))
+        .map(([, g]) => ({ ...g, resume: `${g.places.length} bouteille${g.places.length > 1 ? 's' : ''}`, places: g.places.sort((x, y) => (x.produit?.nom || '').localeCompare(y.produit?.nom || '')) }));
+      remplacer(zone,
+        h('div', { class: 'tri-bar', role: 'group', 'aria-label': 'Ranger par' }, h('span', { class: 'discret' }, 'Ranger par'),
+          Object.entries(REGROUPEMENTS).map(([k, t]) => h('button', { type: 'button', class: 'puce-mot', 'aria-pressed': String(k === triBar), onclick: () => { triBar = k; dessiner(); } }, t.titre))),
+        h('div', { class: 'carte bar-carte' }, liste.length ? dessinerBar(liste, { surChoix: (pl) => { choisi = pl.bouteille.numero; recherche = ''; champ.value = ''; dessiner(); } }) : h('p', { class: 'discret' }, 'Aucune bouteille ici : rangez-en depuis leur fiche ou ci-dessous.')));
     } else if (aGrille(r)) {
       const parEmplacement = new Map(ici.map((b) => [b.emplacement, b]));
       const rangs = [];
@@ -147,7 +153,15 @@ async function ecranDetail(core, el, { id }) {
     resultat.textContent = choisi || recherche ? `${trouves.length} bouteille${trouves.length > 1 ? 's' : ''}${premier?.emplacement ? ` · ${libelleEmplacement(r, premier.emplacement)}` : ''}` : '';
     remplacer(carteChoix, ...(premier ? [h('a', { href: `#/fiche/${premier.produit_id}`, class: 'carte bouteille-choisie' },
       emplacement(premier.numero, styleDe(premier)),
-      h('span', {}, h('strong', {}, nomDe(premier)), h('span', { class: 'discret bloc' }, `${libelleEmplacement(r, premier.emplacement) || r.nom} · voir le détail dans l'inventaire`)))] : []));
+      h('span', {}, h('strong', {}, nomDe(premier)), h('span', { class: 'discret bloc' }, detailChoix(premier))))] : []));
+  }
+
+  // Sous-titre de la bouteille choisie : lieu, ou origine et niveau pour le bar.
+  function detailChoix(b) {
+    if (vueDe(r) !== 'bar') return `${libelleEmplacement(r, b.emplacement) || r.nom} · voir le détail dans l'inventaire`;
+    const p = produits.get(b.produit_id);
+    const cl = Number(p?.extra?.volume_cl) || 70, niveau = b.etat === 'ouverte' ? b.niveau ?? 100 : 100;
+    return [p?.region || DRAPEAUX[p?.pays]?.nom, b.etat === 'ouverte' ? `reste ${libelleNiveau(niveau)}` : 'pleine', `≈ ${versesRestants(niveau, cl)} verres`].filter(Boolean).join(' · ');
   }
 
   const resultat = h('span', { class: 'discret' });
@@ -186,8 +200,8 @@ async function ecranDetail(core, el, { id }) {
     h('label', { class: 'champ' }, h('span', { class: 'libelle' }, 'Collection'),
       h('select', { name: 'profil' }, Object.entries(COLLECTIONS).map(([k, t]) => h('option', { value: k, selected: k === collectionDe(r) }, t)))),
     grilleR ? h('div', { class: 'deux' },
-      h('label', { class: 'champ' }, h('span', { class: 'libelle' }, grilleDe(r) === 'bar' ? 'Étagères' : 'Rangées'), h('input', { name: 'lignes', type: 'number', min: '1', max: '30', value: String(r.lignes) })),
-      h('label', { class: 'champ' }, h('span', { class: 'libelle' }, grilleDe(r) === 'bar' ? 'Bouteilles par étagère' : 'Emplacements par rangée'), h('input', { name: 'colonnes', type: 'number', min: '1', max: '30', value: String(r.colonnes) }))) : null,
+      h('label', { class: 'champ' }, h('span', { class: 'libelle' }, 'Rangées'), h('input', { name: 'lignes', type: 'number', min: '1', max: '30', value: String(r.lignes) })),
+      h('label', { class: 'champ' }, h('span', { class: 'libelle' }, 'Emplacements par rangée'), h('input', { name: 'colonnes', type: 'number', min: '1', max: '30', value: String(r.colonnes) }))) : null,
     msgModif,
     h('div', { class: 'boutons' },
       h('button', { type: 'submit', class: 'bouton principal' }, 'Enregistrer'),

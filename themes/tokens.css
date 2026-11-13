@@ -1,6 +1,7 @@
 /* Jetons communs et mise en page. Couleurs propres au profil : vin.css / spiritueux.css. */
 :root {
   --c-halo: #F5C518;
+  --c-bois: #A9744A;
   --c-apogee: #2F6F4E;
   --c-apogee-fond: #E5F1EA;
   --c-jeunesse: #2D5B8C;

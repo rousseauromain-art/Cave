@@ -105,7 +105,9 @@ export async function ecranFiche(core, el, { id }) {
     })() : null,
     section(core, 'notes', 'Notes', p.commentaire || p.extra?.lien ? '' : 'vide',
       h('p', { class: 'notes-texte' }, p.commentaire || 'Aucune note.'),
-      p.extra?.lien && /^https:\/\//.test(p.extra.lien) ? h('a', { href: p.extra.lien, target: '_blank', rel: 'noopener noreferrer' }, 'Fiche du producteur ↗') : null)
+      p.extra?.lien && /^https:\/\//.test(p.extra.lien) ? h('a', { href: p.extra.lien, target: '_blank', rel: 'noopener noreferrer' }, 'Fiche du producteur ↗') : null),
+    p.extra?.texte_lu?.recto || p.extra?.texte_lu?.verso ? section(core, 'texte-lu', 'Texte de l’étiquette', p.extra.texte_lu.verso ? 'recto et verso' : 'recto',
+      h('pre', { class: 'texte-etiquette' }, [p.extra.texte_lu.recto, p.extra.texte_lu.verso && `— Verso —\n${p.extra.texte_lu.verso}`].filter(Boolean).join('\n\n'))) : null
   ];
 
   el.append(
@@ -114,7 +116,8 @@ export async function ecranFiche(core, el, { id }) {
       h('div', { class: 'fiche-titre' },
         h('span', { class: 'surtitre' }, [style?.titre, p.region, p.appellation].filter(Boolean).join(' · ')),
         h('h2', {}, nomComplet(p)),
-        p.producteur || p.cuvee ? h('span', { class: 'sous-titre' }, [p.producteur, p.cuvee].filter(Boolean).join(' · ')) : null),
+        p.producteur || p.cuvee ? h('span', { class: 'sous-titre' }, [p.producteur, p.cuvee].filter(Boolean).join(' · ')) : null,
+        p.cepages ? h('div', { class: 'puces-mots lecture cepages-fiche', 'aria-label': 'Cépages' }, p.cepages.split(/\s*[,·\/]\s*/).filter(Boolean).map((c) => h('span', { class: 'puce-mot' }, c))) : null),
       sections)
   );
 }
