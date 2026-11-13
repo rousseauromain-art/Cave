@@ -297,3 +297,6 @@ a.bouton { text-decoration: none; }
 .bandeau-info { background: var(--c-surface); border: 1px solid var(--c-halo); border-radius: 14px; padding: 10px 12px; font-size: 13.5px; line-height: 1.4; margin: 0 0 12px; }
 .texte-etiquette { white-space: pre-wrap; font: 12.5px/1.45 ui-monospace, monospace; color: var(--c-texte-2); margin: 0; }
 .cepages-fiche { justify-content: flex-start; margin: 6px 0 0; }
+.boutons-scan { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.boutons-scan .bouton { justify-content: center; }
+.lien-galerie { font-size: 13px; color: var(--c-accent); text-decoration: underline; min-height: 40px; display: flex; align-items: center; cursor: pointer; }

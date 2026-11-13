@@ -57,7 +57,7 @@ test('S7-02 whisky rangé dans un rangement existant (groupé puis bouteille par
   await expect(page.locator('.editeur-bouteille select[aria-label="Emplacement"]')).toHaveCount(0);
   await page.locator('.editeur-bouteille').getByRole('button', { name: 'Enregistrer' }).click();
   await expect(enCave(page).nth(1)).toContainText('Bar test');
-  await expect(page.getByRole('link', { name: /Localiser la bouteille/ })).toHaveCount(1);
+  await expect(page.getByRole('link', { name: /Localiser la bouteille/ })).toHaveCount(2); // étagère et bar s'affichent en étagères côté spiritueux
   await page.goto(`./#/rangement/${await id(page, 'etagere')}`);
   await expect(page.locator('#vue')).toContainText('Whisky Test');
 });
@@ -159,6 +159,22 @@ test('S9-01 bar en lecture seule : étagères par pays, 6 par planche, nom et ni
   await expect(page.locator('.bar-entete strong')).toHaveText(['Entamées', 'Pleines']);
   await page.getByRole('button', { name: 'Catégorie', exact: true }).click();
   await expect(page.locator('.bar-entete strong')).toHaveCount(3);
+});
+
+test('S9-06 placard côté spiritueux : étagères par défaut (spiritueux seuls), bascule vers la liste', async ({ page }) => {
+  await page.evaluate(async () => {
+    const { creerStore } = await import('/core/store.js');
+    const s = creerStore('cave');
+    for (const b of (await s.list('bouteilles')).filter((x) => x.produit_id === window.ids.whisky)) await s.put('bouteilles', { ...b, rangement_id: window.ids.etagere });
+  });
+  await page.locator('[data-profil-choix="spiritueux"]').click();
+  await page.goto(`./#/rangement/${await id(page, 'etagere')}`);
+  await expect(page.locator('.bar-entete strong')).toHaveText(['Écosse']);
+  await page.getByRole('button', { name: 'Liste', exact: true }).click();
+  await expect(page.locator('.liste-simple')).toContainText('Whisky Test');
+  await page.getByRole('button', { name: 'Étagères', exact: true }).click();
+  await expect(page.locator('.bar')).toBeVisible();
+  await expect(page.getByText('+ 3 bouteilles de vin ici (voir la liste).')).toBeVisible();
 });
 
 test('S9-02 forme de la bouteille choisie dans la fiche (création et modification)', async ({ page }) => {

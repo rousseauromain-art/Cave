@@ -133,14 +133,16 @@ test.describe('écran Scanner', () => {
     await page.goto('./#/cave');
     await page.locator('[data-profil-choix="spiritueux"]').click();
     await page.goto('./#/scanner');
-    await page.locator('#photo-scan').setInputFiles(path.join(__dirname, '../icons/icone-192.png'));
+    await expect(page.locator('label[for="photo-scan-galerie"]')).toHaveText('Choisir une photo');
+    await page.locator('#photo-scan-galerie').setInputFiles(path.join(__dirname, '../icons/icone-192.png'));
     await expect(page.locator('.bandeau-info')).toContainText('C’est un vin');
     await expect(page.locator('html')).toHaveAttribute('data-profil', 'vin');
     await expect(page.locator('.champs-lus')).toContainText('Famille de Lorgeril');
     await expect(page.locator('.champs-lus')).toContainText('(déduit des cépages)');
     await expect(page.locator('.cepages-lus .puce-mot')).toHaveText(['Syrah', 'Grenache']);
     await expect(page.getByText('Aucun vin ressemblant dans votre cave.')).toBeVisible();
-    await page.locator('#photo-verso').setInputFiles(path.join(__dirname, '../icons/icone-192.png'));
+    await expect(page.locator('label[for="photo-verso-galerie"]')).toBeVisible();
+    await page.locator('#photo-verso-galerie').setInputFiles(path.join(__dirname, '../icons/icone-192.png'));
     await expect(page.getByRole('status').filter({ hasText: 'Verso lu par OCR.space' })).toBeVisible();
     await expect(page.locator('.champs-lus')).toContainText('13.5 %');
     await page.getByRole('button', { name: 'Créer la fiche de ce vin' }).click();

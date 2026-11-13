@@ -33,9 +33,11 @@ export function grilleDe(r) {
   return g && r.lignes > 0 && r.colonnes > 0 ? g : null;
 }
 
-// Vue du détail : 'bar' (illustration), 'casier' (grille de culs de bouteille) ou 'liste'.
-export function vueDe(r) {
-  return TYPES[r?.type]?.vue || (grilleDe(r) ? 'casier' : 'liste');
+// Vue du détail : 'casier' (grille de culs de bouteille), 'bar' (illustration en étagères) ou 'liste'.
+// Un rangement sans grille (placard, étagère, carton…) s'affiche en bar côté spiritueux.
+export function vueDe(r, profil = null) {
+  if (grilleDe(r)) return 'casier';
+  return TYPES[r?.type]?.vue || (profil === 'spiritueux' ? 'bar' : 'liste');
 }
 
 // Emplacement affiché seulement pour les rangements à grille (« R3-E2 »).

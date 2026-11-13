@@ -20,50 +20,50 @@ async function ecran(core, el) {
   const journal = (t) => core.store.journaliser('info', t);
   let etat = null; // { trouve, photo, verso, bascule }
 
-  const entree = h('input', {
-    type: 'file', accept: 'image/*', capture: 'environment', id: 'photo-scan', class: 'masque',
-    onchange: async (e) => {
-      const f = e.target.files[0];
-      e.target.value = '';
-      if (!f) return;
-      const photo = await compresser(f);
-      remplacer(apercu);
-      remplacer(resultat);
-      try {
-        const trouve = await identifier(photo, profil, { statut: (t) => { statut.textContent = t; }, journal });
-        statut.textContent = `Lu par ${trouve.source}.`;
-        etat = { trouve, photo, verso: null, bascule: null };
-        if (trouve.profil !== profil) {
-          // L'étiquette dit l'inverse du profil affiché : on change de profil et l'écran se redessine avec la lecture.
-          enCours = { ...etat, bascule: profil };
-          core.basculerProfil();
-          return;
-        }
-        await afficher();
-      } catch (err) {
-        statut.textContent = `Identification impossible : ${err.message}`;
-        core.store.journaliser('erreur', `Identification : ${err.message}`);
+  // Deux entrées par face : appareil photo, ou photo déjà prise (galerie, fichiers).
+  const entrees = (id, surPhoto) => [
+    h('input', { type: 'file', accept: 'image/*', capture: 'environment', id, class: 'masque', onchange: surPhoto }),
+    h('input', { type: 'file', accept: 'image/*', id: `${id}-galerie`, class: 'masque', onchange: surPhoto })
+  ];
+
+  const entree = entrees('photo-scan', async (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    const photo = await compresser(f);
+    remplacer(apercu);
+    remplacer(resultat);
+    try {
+      const trouve = await identifier(photo, profil, { statut: (t) => { statut.textContent = t; }, journal });
+      statut.textContent = `Lu par ${trouve.source}.`;
+      etat = { trouve, photo, verso: null, bascule: null };
+      if (trouve.profil !== profil) {
+        // L'étiquette dit l'inverse du profil affiché : on change de profil et l'écran se redessine avec la lecture.
+        enCours = { ...etat, bascule: profil };
+        core.basculerProfil();
+        return;
       }
+      await afficher();
+    } catch (err) {
+      statut.textContent = `Identification impossible : ${err.message}`;
+      core.store.journaliser('erreur', `Identification : ${err.message}`);
     }
   });
 
   // Verso (contre-étiquette) : texte ajouté à la lecture, champs manquants complétés.
-  const entreeVerso = h('input', {
-    type: 'file', accept: 'image/*', capture: 'environment', id: 'photo-verso', class: 'masque',
-    onchange: async (e) => {
-      const f = e.target.files[0];
-      e.target.value = '';
-      if (!f || !etat) return;
-      const photo = await compresser(f);
-      try {
-        const { lignes, source } = await lireTexte(photo, { statut: (t) => { statut.textContent = t; }, journal });
-        etat.trouve = await completerAvecVerso(etat.trouve, lignes);
-        etat.verso = photo;
-        statut.textContent = `Verso lu par ${source}.`;
-        await afficher();
-      } catch (err) {
-        statut.textContent = `Lecture du verso impossible : ${err.message}`;
-      }
+  const entreeVerso = entrees('photo-verso', async (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f || !etat) return;
+    const photo = await compresser(f);
+    try {
+      const { lignes, source } = await lireTexte(photo, { statut: (t) => { statut.textContent = t; }, journal });
+      etat.trouve = await completerAvecVerso(etat.trouve, lignes);
+      etat.verso = photo;
+      statut.textContent = `Verso lu par ${source}.`;
+      await afficher();
+    } catch (err) {
+      statut.textContent = `Lecture du verso impossible : ${err.message}`;
     }
   });
 
@@ -92,7 +92,8 @@ async function ecran(core, el) {
     remplacer(apercu,
       h('figure', { class: 'face-scan' }, h('img', { src: URL.createObjectURL(photo), alt: 'Recto de l’étiquette' }), h('figcaption', {}, 'Recto · lu')),
       verso ? h('figure', { class: 'face-scan' }, h('img', { src: URL.createObjectURL(verso), alt: 'Verso de l’étiquette' }), h('figcaption', {}, 'Verso · lu'))
-        : h('figure', { class: 'face-scan' }, h('label', { for: 'photo-verso', class: 'ajout-verso' }, h('span', { 'aria-hidden': 'true' }, '+'), 'Ajouter le verso'), h('figcaption', {}, 'Contre-étiquette : description, accords')));
+        : h('figure', { class: 'face-scan' }, h('label', { for: 'photo-verso', class: 'ajout-verso' }, h('span', { 'aria-hidden': 'true' }, '+'), 'Ajouter le verso'),
+          h('label', { for: 'photo-verso-galerie', class: 'lien-galerie' }, 'ou depuis la galerie'), h('figcaption', {}, 'Contre-étiquette : description, accords')));
     remplacer(resultat,
       bascule ? h('p', { class: 'bandeau-info', role: 'status' }, `C’est ${vin ? 'un vin' : 'un spiritueux'} : vous étiez en ${bascule === 'vin' ? 'Vins' : 'Spiritueux'}, l’app est passée en `, h('strong', {}, vin ? 'Vins' : 'Spiritueux'), '.') : null,
       h('section', { class: 'carte' },
@@ -113,7 +114,9 @@ async function ecran(core, el) {
       h('h2', {}, profil === 'vin' ? 'Photographier une étiquette' : 'Photographier une bouteille'),
       h('p', { class: 'discret' }, 'Un verre offert ou une bouteille de la cave : l’app la reconnaît si elle y est déjà, sinon prépare sa fiche.'),
       apercu,
-      h('label', { for: 'photo-scan', class: 'bouton principal grand' }, core.icone(ICONES.scanner, 22), 'Prendre la photo'),
+      h('div', { class: 'boutons-scan' },
+        h('label', { for: 'photo-scan', class: 'bouton principal grand' }, core.icone(ICONES.scanner, 22), 'Prendre la photo'),
+        h('label', { for: 'photo-scan-galerie', class: 'bouton grand' }, core.icone(ICONES.photo || '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 8"/>', 22), 'Choisir une photo')),
       entree, entreeVerso,
       statut),
     resultat);
