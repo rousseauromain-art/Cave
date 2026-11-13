@@ -1,6 +1,7 @@
 // Règles métier de l'inventaire, partagées par les modules Cave, Rangements, Ce soir, Dégustations.
 import { STYLES } from '../data/styles.js';
 import { chargerTable, estimer, phase, PHASES } from './apogee.js';
+import { grilleDe } from './rangements.js';
 
 export const EN_CAVE = ['stock', 'ouverte'];
 
@@ -102,5 +103,5 @@ export async function emplacementsLibres(store, rangement) {
 }
 
 export function aGrille(rangement) {
-  return ['casier', 'montrouge'].includes(rangement?.type) && rangement.lignes > 0 && rangement.colonnes > 0;
+  return !!grilleDe(rangement);
 }

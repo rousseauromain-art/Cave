@@ -1,5 +1,8 @@
 // S1 : inventaire, fiche, ajout sans stock, bouteilles, rangements avec halo, reprise de l'ancienne app.
 const { test, expect } = require('@playwright/test');
+const { choisirProfil } = require('./outils/profil.js');
+// Bascule vers l'autre profil via le sélecteur.
+const basculer = async (page) => choisirProfil(page, (await page.locator('html').getAttribute('data-profil')) === 'spiritueux' ? 'vin' : 'spiritueux');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -114,16 +117,20 @@ test('S1-06 modifier puis supprimer (confirmation en deux temps)', async ({ page
 });
 
 test('S1-07 spiritueux : ouvrir une bouteille, niveau restant et jauge', async ({ page }) => {
-  await page.locator('[data-test="bascule-profil"]').click();
+  await basculer(page);
   await onglet(page, 'Cave');
   await ajouterVin(page, { nom: 'Malt Fictif', style: 'tourbe', pays: 'SC', quantite: 1, profil: 'spiritueux' });
   await page.getByRole('button', { name: 'Ouvrir une bouteille' }).click();
-  await expect(page.getByText('ouverte, reste 100 %')).toBeVisible();
-  await page.getByLabel('Niveau restant').fill('40');
-  await page.getByLabel('Niveau restant').dispatchEvent('change');
-  await expect(page.getByText('ouverte, reste 40 %')).toBeVisible();
+  await expect(page.getByText('ouverte, reste Plein')).toBeVisible();
+  await page.getByRole('radiogroup', { name: 'Niveau restant' }).getByRole('radio', { name: '½' }).click();
+  await expect(page.getByText('ouverte, reste ½')).toBeVisible();
+  await expect(page.getByText('≈ 8 verre(s) de 4 cl')).toBeVisible();
+  await page.getByRole('button', { name: 'Je me suis servi un verre (4 cl)' }).click();
+  await expect(page.getByText('≈ 7 verre(s) de 4 cl')).toBeVisible();
+  await page.getByRole('radio', { name: '¾' }).click();
+  await page.getByRole('radio', { name: '½' }).click();
   await onglet(page, 'Cave');
-  await expect(page.getByRole('img', { name: 'Reste 40 %' })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Reste 50 %' })).toBeVisible();
   await page.getByRole('button', { name: 'Entamées' }).click();
   await expect(page.locator('.tuile')).toHaveCount(1);
 });

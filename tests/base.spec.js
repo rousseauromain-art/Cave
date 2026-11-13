@@ -11,6 +11,7 @@ test.beforeEach(async ({ page }) => {
     window.ids = {};
     window.ids.etagere = (await s.put('rangements', { nom: 'Étagère bar', type: 'etagere' })).id;
     window.ids.casier = (await s.put('rangements', { nom: 'Petit casier', type: 'casier', lignes: 2, colonnes: 2 })).id;
+    window.ids.bar = (await s.put('rangements', { nom: 'Bar test', type: 'bar', lignes: 2, colonnes: 3 })).id;
     const w = await s.put('produits', { profil: 'spiritueux', nom: 'Whisky Test', style: 'malt', pays: 'SC' });
     await ajouterBouteilles(s, w.id, 2);
     window.ids.whisky = w.id;
@@ -50,10 +51,12 @@ test('S7-02 whisky rangé dans un rangement existant (groupé puis bouteille par
   await expect(enCave(page)).toHaveText([/Étagère bar/, /Étagère bar/]);
   // Déplacer la 2e bouteille dans le casier, à un emplacement précis
   await page.getByRole('button', { name: /^Modifier la bouteille/ }).nth(1).click();
-  await page.locator('.editeur-bouteille').getByLabel(/^Rangement de la bouteille/).selectOption({ label: 'Petit casier' });
-  await page.locator('.editeur-bouteille select[aria-label="Emplacement"]').selectOption('R1-E2');
+  const options = await page.locator('.editeur-bouteille').getByLabel(/^Rangement de la bouteille/).locator('option').allTextContents();
+  expect(options).not.toContain('Petit casier'); // casier à vin non proposé pour un whisky
+  await page.locator('.editeur-bouteille').getByLabel(/^Rangement de la bouteille/).selectOption({ label: 'Bar test' });
+  await page.locator('.editeur-bouteille select[aria-label="Emplacement"]').selectOption({ label: 'Étagère 1 · place 2' });
   await page.locator('.editeur-bouteille').getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(enCave(page).nth(1)).toContainText('Petit casier · R1-E2');
+  await expect(enCave(page).nth(1)).toContainText('Bar test · Étagère 1 · place 2');
   await page.goto(`./#/rangement/${await id(page, 'etagere')}`);
   await expect(page.locator('#vue')).toContainText('Whisky Test');
 });
@@ -115,4 +118,44 @@ test('S7-07 création d’un doublon : la fiche existante est proposée', async 
   await expect(page.getByRole('link', { name: 'ouvrir sa fiche pour ajouter des bouteilles' })).toBeVisible();
   await page.getByRole('link', { name: 'ouvrir sa fiche pour ajouter des bouteilles' }).click();
   await expect(page.locator('.compteur-stock')).toContainText('3 bouteilles');
+});
+
+test('S8-01 bar : étagères, silhouettes, liquide au niveau, comptoir, halo de recherche', async ({ page }) => {
+  await page.evaluate(async () => {
+    const { creerStore } = await import('/core/store.js');
+    const s = creerStore('cave');
+    const bt = (await s.list('bouteilles')).filter((b) => b.produit_id === window.ids.whisky);
+    await s.put('bouteilles', { ...bt[0], rangement_id: window.ids.bar, emplacement: 'R2-E1', etat: 'ouverte', niveau: 25 });
+    await s.put('bouteilles', { ...bt[1], rangement_id: window.ids.bar, emplacement: null });
+  });
+  await page.goto('./#/rangements');
+  await page.locator('[data-profil-choix="spiritueux"]').click();
+  await expect(page.getByText('Bar test')).toBeVisible();
+  await expect(page.getByText('Petit casier')).toHaveCount(0); // rangement de la collection Vins
+  await page.getByText('Bar test').click();
+  await expect(page.locator('.bar-rangee .bar-titre')).toHaveText(['Étagère 1', 'Étagère 2', 'Sur le comptoir · à placer']);
+  await expect(page.getByRole('button', { name: /Bouteille \d+, Whisky Test, Étagère 1 · place 1, reste 25 %/ })).toBeVisible();
+  await page.getByLabel('Chercher un vin dans ce rangement').fill('whisky');
+  await expect(page.locator('.bar-halo')).toHaveCount(2);
+  await page.getByRole('button', { name: /reste 25 %/ }).click();
+  await expect(page.locator('.bar-halo')).toHaveCount(1);
+  await expect(page.locator('.bouteille-choisie')).toContainText('Étagère 1 · place 1');
+});
+
+test('S8-02 création d\u2019un rangement : types et collection selon le profil', async ({ page }) => {
+  await page.goto('./#/rangements');
+  await page.locator('[data-profil-choix="spiritueux"]').click();
+  await expect(page.locator('select[name="type"]')).toHaveValue('bar');
+  const types = await page.locator('select[name="type"] option').allTextContents();
+  expect(types).toContain('Bar (étagères à bouteilles)');
+  expect(types).not.toContain('Casier Montrouge (connecté)');
+  await expect(page.locator('select[name="profil"]')).toHaveValue('spiritueux');
+  await expect(page.locator('input[name="lignes"]')).toHaveValue('3');
+  await expect(page.getByText('Bouteilles par étagère')).toBeVisible();
+  await page.getByLabel('Nom').fill('Vitrine salon');
+  await page.locator('select[name="type"]').selectOption('vitrine');
+  await page.getByRole('button', { name: 'Créer' }).click();
+  await expect(page.getByText('Vitrine salon')).toBeVisible();
+  await page.locator('[data-profil-choix="vin"]').click();
+  await expect(page.getByText('Vitrine salon')).toHaveCount(0);
 });

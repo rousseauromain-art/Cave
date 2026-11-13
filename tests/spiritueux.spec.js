@@ -1,5 +1,8 @@
 // S5 : profil spiritueux et reprise de la collection whisky (page legacy du dépôt).
 const { test, expect } = require('@playwright/test');
+const { choisirProfil } = require('./outils/profil.js');
+// Bascule vers l'autre profil via le sélecteur.
+const basculer = async (page) => choisirProfil(page, (await page.locator('html').getAttribute('data-profil')) === 'spiritueux' ? 'vin' : 'spiritueux');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
@@ -39,7 +42,7 @@ test.describe('écrans spiritueux', () => {
     await page.getByRole('button', { name: 'Rhums' }).click();
     await expect(page.locator('.tuile')).toHaveCount(4);
     // Le profil vin reste séparé
-    await page.locator('[data-test="bascule-profil"]').click();
+    await basculer(page);
     await expect(page.locator('.tuile')).toHaveCount(0);
   });
 
@@ -55,7 +58,7 @@ test.describe('écrans spiritueux', () => {
         if (niveau !== null) await s.put('bouteilles', { ...(await sortirBouteille(s, b, 'ouverte')), niveau });
       }
     });
-    await page.locator('[data-test="bascule-profil"]').click();
+    await basculer(page);
     await page.goto('./#/ce-soir');
     const entamees = page.locator('.groupe-ce-soir').first();
     await expect(entamees.locator('h2')).toContainText('Bouteilles entamées');

@@ -58,7 +58,8 @@ export async function ecranFormulaire(core, el, { id }) {
     vin ? champ(h, 'Appellation', entree('appellation'))
       : h('div', { class: 'deux' },
         champ(h, 'Degré (% vol.)', entree('degre', { type: 'number', inputmode: 'decimal', step: '0.1', min: '0', max: '80' })),
-        champ(h, 'Fût', entree('fut'))),
+        champ(h, 'Contenance (cl)', h('input', { name: 'volume_cl', type: 'number', inputmode: 'numeric', min: '5', max: '300', value: String(p.extra?.volume_cl ?? 70) }))),
+    vin ? null : champ(h, 'Fût', entree('fut')),
     vin ? h('div', { class: 'deux' },
       champ(h, 'Apogée de', entree('apogee_debut', { type: 'number', inputmode: 'numeric', min: '1900', max: '2200' })),
       champ(h, 'à', entree('apogee_fin', { type: 'number', inputmode: 'numeric', min: '1900', max: '2200' }))) : null,
@@ -107,7 +108,8 @@ export async function ecranFormulaire(core, el, { id }) {
       cepages: vin ? d.cepages?.trim() || null : p.cepages ?? null,
       fut: d.fut?.trim() || null, apogee_debut: nombre(d.apogee_debut), apogee_fin: nombre(d.apogee_fin),
       note: d.note === '' ? null : Math.max(0, Math.min(5, Number(d.note))), commentaire: d.commentaire?.trim() || null,
-      photo_path: nouvellePhoto ? null : p.photo_path ?? null
+      photo_path: nouvellePhoto ? null : p.photo_path ?? null,
+      extra: vin ? p.extra ?? {} : { ...(p.extra || {}), volume_cl: Number(d.volume_cl) || 70 }
     });
     if (nouvellePhoto) {
       await core.store.enregistrerPhoto(produit.id, nouvellePhoto);

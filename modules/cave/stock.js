@@ -3,8 +3,14 @@
 import { ajouterBouteilles, sortirBouteille, aGrille, emplacementsLibres, EN_CAVE } from '../../core/inventaire.js';
 import { toast } from '../../core/ui/toast.js';
 import { remplacer } from '../../core/ui/dom.js';
+import { libelleEmplacement, visibleDans } from '../../core/rangements.js';
 
 const ETATS = { stock: 'En stock', ouverte: 'Ouverte', bue: 'Bue', offerte: 'Offerte' };
+// Niveau affiché au quart près.
+const QUARTS = [[100, 'Plein'], [75, '¾'], [50, '½'], [25, '¼'], [5, 'Fond']];
+const quartDe = (n) => (n <= 12 ? 5 : Math.round(n / 25) * 25);
+export const libelleNiveau = (n) => Object.fromEntries(QUARTS)[quartDe(n)];
+const versesRestants = (n, cl) => Math.max(0, Math.floor((n / 100) * cl / 4));
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 export async function contenuStock(core, p, rangements) {
@@ -19,7 +25,9 @@ export async function contenuStock(core, p, rangements) {
   const toutes = (await core.store.list('bouteilles')).filter((b) => b.produit_id === p.id);
   const sorties = toutes.filter((b) => !EN_CAVE.includes(b.etat)).sort((a, b) => String(b.sortie_le || '').localeCompare(String(a.sortie_le || '')));
   const message = h('p', { class: 'message', role: 'alert' });
-  const nomRangement = (b) => [rangements.get(b.rangement_id)?.nom, b.emplacement].filter(Boolean).join(' · ') || 'Sans rangement';
+  const nomRangement = (b) => { const r = rangements.get(b.rangement_id); return [r?.nom, libelleEmplacement(r, b.emplacement)].filter(Boolean).join(' · ') || 'Sans rangement'; };
+  // Seuls les rangements de la collection du produit (ou mixtes) sont proposés.
+  rangements = new Map([...rangements].filter(([, r]) => visibleDans(r, p.profil) || p.bouteilles.some((b) => b.rangement_id === r.id)));
   const dernierRangement = [...p.bouteilles].reverse().find((b) => b.rangement_id)?.rangement_id || null;
 
   async function placer(rangementId, n) {
@@ -70,10 +78,17 @@ export async function contenuStock(core, p, rangements) {
       type: 'button', class: 'bouton principal',
       onclick: () => avecAnnulation(spiritueux ? 'Bouteille ouverte.' : 'Bouteille ouverte : bonne dégustation !', [enStock[0]], () => sortirBouteille(core.store, enStock[0], spiritueux ? 'ouverte' : 'bue'))
     }, 'Ouvrir une bouteille') : null;
-  const niveau = ouverte && spiritueux
-    ? h('label', { class: 'niveau' }, `Niveau restant · bouteille n° ${ouverte.numero}`,
-      h('input', { type: 'range', min: '0', max: '100', step: '5', value: String(ouverte.niveau ?? 100), onchange: (e) => avecAnnulation(`Niveau : ${e.target.value} %`, [ouverte], () => core.store.put('bouteilles', { ...ouverte, niveau: Number(e.target.value) })) }))
-    : null;
+  // Niveau d'une bouteille ouverte : en quarts, ou « un verre » (4 cl selon la contenance).
+  const contenance = Number(p.extra?.volume_cl) || 70;
+  const niveau = ouverte && spiritueux ? (() => {
+    const actuel = ouverte.niveau ?? 100;
+    const regler = (v, texte) => avecAnnulation(texte, [ouverte], () => core.store.put('bouteilles', { ...ouverte, niveau: Math.max(0, Math.min(100, Math.round(v))) }));
+    return h('div', { class: 'niveau' },
+      h('span', { class: 'libelle' }, `Niveau · bouteille n° ${ouverte.numero} · ${libelleNiveau(actuel)} · ≈ ${versesRestants(actuel, contenance)} verre(s) de 4 cl`),
+      h('div', { class: 'quarts', role: 'radiogroup', 'aria-label': 'Niveau restant' },
+        QUARTS.map(([v, t]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(quartDe(actuel) === v), onclick: () => regler(v, `Niveau : ${t}`) }, t))),
+      h('button', { type: 'button', class: 'bouton', onclick: () => regler(actuel - (4 / contenance) * 100, 'Un verre de 4 cl servi.') }, 'Je me suis servi un verre (4 cl)'));
+  })() : null;
 
   // Bouteille par bouteille
   const options = (selection) => [h('option', { value: '' }, 'Sans rangement'), [...rangements.values()].map((r) => h('option', { value: r.id, selected: r.id === selection }, r.nom))];
@@ -85,7 +100,7 @@ export async function contenuStock(core, p, rangements) {
       if (r && aGrille(r)) {
         const libres = await emplacementsLibres(core.store, r);
         const liste = b.rangement_id === r.id && b.emplacement ? [b.emplacement, ...libres] : libres;
-        remplacer(zoneEmpl, h('select', { 'aria-label': 'Emplacement' }, h('option', { value: '' }, 'Sans emplacement'), liste.map((e) => h('option', { value: e, selected: e === b.emplacement }, e))));
+        remplacer(zoneEmpl, h('select', { 'aria-label': 'Emplacement' }, h('option', { value: '' }, 'Sans emplacement'), liste.map((e) => h('option', { value: e, selected: e === b.emplacement }, libelleEmplacement(r, e)))));
       } else {
         remplacer(zoneEmpl, h('input', { type: 'text', value: rangements.get(b.rangement_id)?.id === choixR.value ? b.emplacement || '' : '', placeholder: 'Étagère, position… (facultatif)', 'aria-label': 'Emplacement' }));
       }
@@ -115,7 +130,7 @@ export async function contenuStock(core, p, rangements) {
     const r = rangements.get(b.rangement_id);
     const li = h('li', { class: 'bouteille' },
       h('span', { class: 'numero' }, `#${b.numero}`),
-      h('span', { class: 'lieu' }, nomRangement(b), b.etat === 'ouverte' ? h('span', { class: 'discret' }, ` · ouverte, reste ${b.niveau ?? 100} %`) : null),
+      h('span', { class: 'lieu' }, nomRangement(b), b.etat === 'ouverte' ? h('span', { class: 'discret' }, ` · ouverte, reste ${libelleNiveau(b.niveau ?? 100)}`) : null),
       r && aGrille(r) && b.emplacement ? h('a', { href: `#/rangement/${r.id}?b=${b.numero}`, class: 'lien-localiser', 'aria-label': `Localiser la bouteille ${b.numero}` }, core.icone('<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>', 20)) : null,
       h('button', { type: 'button', class: 'lien-localiser', 'aria-label': `Modifier la bouteille ${b.numero}`, onclick: (e) => { const ouvert = e.currentTarget.closest('li').nextElementSibling?.classList.contains('editeur-bouteille'); if (ouvert) e.currentTarget.closest('li').nextElementSibling.remove(); else editeur(b, e.currentTarget.closest('li')); } },
         core.icone('<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>', 18)));
