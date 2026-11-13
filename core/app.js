@@ -62,13 +62,6 @@ function rendreEntete(ecran) {
   document.getElementById('titre').textContent = libelle(ecran);
   document.title = `${libelle(ecran)} · Cave`;
   const actions = vider(document.getElementById('actions'));
-  const autre = profilCourant() === 'vin' ? 'spiritueux' : 'vin';
-  const bascule = h('button', {
-    type: 'button', class: 'bouton-rond bascule-profil', 'data-test': 'bascule-profil', 'data-vers': autre,
-    'aria-label': `Passer au profil ${PROFILS[autre].titre}`, title: PROFILS[autre].titre, onclick: basculerProfil
-  });
-  bascule.append(icone(ICONES.bascule, 18), h('span', { class: 'point-profil' }));
-  actions.append(bascule);
   actions.append(sauvegarde.indicateur());
   for (const e of ecrans().filter((x) => x.place === 'entete')) {
     const b = h('a', { href: '#' + e.route, class: 'bouton-rond', 'aria-label': libelle(e) });

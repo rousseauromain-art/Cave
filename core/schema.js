@@ -3,7 +3,7 @@
 const COMMUNES = ['id', 'user_id', 'modifie_le', 'supprime'];
 
 export const TABLES = {
-  rangements: [...COMMUNES, 'nom', 'type', 'lieu', 'lignes', 'colonnes', 'ble_id'],
+  rangements: [...COMMUNES, 'nom', 'type', 'profil', 'lieu', 'lignes', 'colonnes', 'ble_id'],
   produits: [...COMMUNES, 'profil', 'nom', 'producteur', 'cuvee', 'millesime', 'style', 'pays', 'region',
     'appellation', 'cepages', 'degre', 'age_ans', 'fut', 'note', 'apogee_debut', 'apogee_fin', 'photo_path',
     'commentaire', 'extra'],

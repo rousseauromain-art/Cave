@@ -1,5 +1,8 @@
 // S0-01 : navigation, modules activables, bascule de profil, coquille hors ligne.
 const { test, expect } = require('@playwright/test');
+const { choisirProfil } = require('./outils/profil.js');
+// Bascule vers l'autre profil via le sélecteur.
+const basculer = async (page) => choisirProfil(page, (await page.locator('html').getAttribute('data-profil')) === 'spiritueux' ? 'vin' : 'spiritueux');
 const fs = require('fs');
 const path = require('path');
 
@@ -44,12 +47,12 @@ test('un module désactivé sur son écran renvoie à l’accueil', async ({ pag
 test('la bascule de profil change les couleurs sans rechargement et est mémorisée', async ({ page }) => {
   const entete = page.locator('.entete');
   await expect(entete).toHaveCSS('background-color', 'rgb(74, 11, 34)');
-  await page.locator('[data-test="bascule-profil"]').click();
+  await basculer(page);
   await expect(page.locator('html')).toHaveAttribute('data-profil', 'spiritueux');
   await expect(entete).toHaveCSS('background-color', 'rgb(122, 69, 18)');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-profil', 'spiritueux');
-  await page.locator('[data-test="bascule-profil"]').click();
+  await basculer(page);
   await expect(entete).toHaveCSS('background-color', 'rgb(74, 11, 34)');
 });
 
@@ -59,7 +62,7 @@ test('l’aide affiche les légendes du profil courant', async ({ page }) => {
   await expect(page.getByRole('img', { name: 'France' })).toBeVisible();
   await expect(page.getByLabel('Note 4,5 sur 5')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Bouteille 7, trouvée' })).toBeVisible();
-  await page.locator('[data-test="bascule-profil"]').click();
+  await basculer(page);
   await expect(page.getByText('Single malt tourbé')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Bretagne' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Reste 60 %' })).toBeVisible();

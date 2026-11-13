@@ -151,8 +151,9 @@ async function ecranMesure(core, el) {
 
 async function ecranHistorique(core, el) {
   const { h } = core;
-  const lignes = await historique(core.store);
-  el.append(h('a', { href: '#/mesure', class: 'bouton principal grand' }, core.icone(ICONES.etoile, 20), 'Nouvelle dégustation'));
+  const profil = core.profilCourant();
+  const lignes = (await historique(core.store)).filter((l) => !l.produit || l.produit.profil === profil);
+  el.append(h('div', { class: 'bandeau' }, core.selecteurProfil()), h('a', { href: '#/mesure', class: 'bouton principal grand' }, core.icone(ICONES.etoile, 20), 'Nouvelle dégustation'));
   if (!lignes.length) { el.append(h('p', { class: 'vide' }, 'Aucune dégustation pour l’instant.')); return; }
   el.append(h('ul', { class: 'historique' }, lignes.map(({ mesure, degustation, produit }) => h('li', {},
     h('a', { href: produit ? `#/fiche/${produit.id}` : '#/degustations', class: 'carte ligne-historique' },

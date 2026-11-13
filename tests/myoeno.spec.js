@@ -1,5 +1,8 @@
 // S3 : algorithme MyOeno (identique à la v9.3), trames, scanner Bluetooth simulé, enregistrement, reprise de l'historique.
 const { test, expect } = require('@playwright/test');
+const { choisirProfil } = require('./outils/profil.js');
+// Bascule vers l'autre profil via le sélecteur.
+const basculer = async (page) => choisirProfil(page, (await page.locator('html').getAttribute('data-profil')) === 'spiritueux' ? 'vin' : 'spiritueux');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -122,7 +125,7 @@ test.describe('écran Dégustation', () => {
 
   test('S3-06 spiritueux : mesure masquée sauf module expérimental activé', async ({ page }) => {
     await page.goto('./#/mesure');
-    await page.locator('[data-test="bascule-profil"]').click();
+    await basculer(page);
     await expect(page.getByRole('button', { name: 'Connecter le scanner' })).toHaveCount(0);
     await expect(page.getByText('Tourbé')).toBeVisible();
     await page.goto('./#/reglages');

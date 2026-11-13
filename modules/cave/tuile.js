@@ -26,7 +26,7 @@ export function tuile(core, p) {
   const ouverte = p.bouteilles.find((b) => b.etat === 'ouverte');
   return h('a', { href: `#/fiche/${p.id}`, class: 'tuile', 'data-produit': p.id },
     visuel,
-    p.profil === 'spiritueux' && ouverte ? jauge(ouverte.niveau ?? 100) : null,
+    p.profil === 'spiritueux' && ouverte ? jauge(Math.max(8, Math.round((ouverte.niveau ?? 100) / 25) * 25)) : null,
     h('span', { class: 'tuile-nom' }, p.nom),
     h('span', { class: 'tuile-info' }, infoCourte(p) || ' '));
 }
