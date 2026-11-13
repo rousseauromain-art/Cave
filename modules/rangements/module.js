@@ -84,6 +84,7 @@ const REGROUPEMENTS = {
   niveau: { titre: 'Niveau', cle: (b) => (b.etat === 'ouverte' ? ['a', 'Entamées', null] : ['b', 'Pleines', null]), ordre: (a, b) => a.titre.localeCompare(b.titre) }
 };
 let triBar = 'pays';
+const vuesChoisies = new Map();
 
 const normaliser = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -94,6 +95,9 @@ async function ecranDetail(core, el, { id }) {
   if (!r) { el.append(h('p', {}, 'Rangement introuvable.')); return; }
   core.titre(r.nom);
   const ici = enCave.filter((b) => b.rangement_id === r.id);
+  // Sans grille, on peut passer des étagères illustrées à la liste (choix retenu pour la session).
+  const vueParDefaut = vueDe(r, core.profilCourant());
+  const vue = () => (vueParDefaut === 'casier' ? 'casier' : vuesChoisies.get(r.id) || vueParDefaut);
   const cible = Number(core.requete().b) || null;
   let recherche = '';
   let choisi = cible;
@@ -107,9 +111,14 @@ async function ecranDetail(core, el, { id }) {
 
   function dessiner() {
     const trouves = ici.filter(correspond);
-    if (vueDe(r) === 'bar') {
+    const bascule = vueParDefaut === 'casier' ? null : h('div', { class: 'tri-bar', role: 'group', 'aria-label': 'Affichage' }, h('span', { class: 'discret' }, 'Affichage'),
+      [['bar', 'Étagères'], ['liste', 'Liste']].map(([k, t]) => h('button', { type: 'button', class: 'puce-mot', 'aria-pressed': String(vue() === k), onclick: () => { vuesChoisies.set(r.id, k); dessiner(); } }, t)));
+    if (vue() === 'bar') {
       const groupes = new Map();
-      for (const b of ici) {
+      // Le bar ne dessine que les spiritueux ; les vins d'un rangement mixte restent dans la liste.
+      const spiritueux = ici.filter((b) => produits.get(b.produit_id)?.profil === 'spiritueux');
+      const autres = ici.length - spiritueux.length;
+      for (const b of spiritueux) {
         const p = produits.get(b.produit_id);
         const [cle, titre, entete] = REGROUPEMENTS[triBar].cle(b, p);
         if (!groupes.has(cle)) groupes.set(cle, { titre, entete, places: [] });
@@ -117,9 +126,10 @@ async function ecranDetail(core, el, { id }) {
       }
       const liste = [...groupes.entries()].sort(([ka, a], [kb, b]) => (ka === '?') - (kb === '?') || REGROUPEMENTS[triBar].ordre(a, b) || a.titre.localeCompare(b.titre))
         .map(([, g]) => ({ ...g, resume: `${g.places.length} bouteille${g.places.length > 1 ? 's' : ''}`, places: g.places.sort((x, y) => (x.produit?.nom || '').localeCompare(y.produit?.nom || '')) }));
-      remplacer(zone,
+      remplacer(zone, bascule,
         h('div', { class: 'tri-bar', role: 'group', 'aria-label': 'Ranger par' }, h('span', { class: 'discret' }, 'Ranger par'),
           Object.entries(REGROUPEMENTS).map(([k, t]) => h('button', { type: 'button', class: 'puce-mot', 'aria-pressed': String(k === triBar), onclick: () => { triBar = k; dessiner(); } }, t.titre))),
+        autres ? h('p', { class: 'discret' }, `+ ${autres} bouteille${autres > 1 ? 's' : ''} de vin ici (voir la liste).`) : null,
         h('div', { class: 'carte bar-carte' }, liste.length ? dessinerBar(liste, { surChoix: (pl) => { choisi = pl.bouteille.numero; recherche = ''; champ.value = ''; dessiner(); } }) : h('p', { class: 'discret' }, 'Aucune bouteille ici : rangez-en depuis leur fiche ou ci-dessous.')));
     } else if (aGrille(r)) {
       const parEmplacement = new Map(ici.map((b) => [b.emplacement, b]));
@@ -147,7 +157,7 @@ async function ecranDetail(core, el, { id }) {
         const trouve = bt.some(correspond);
         return h('li', { class: trouve ? 'trouve' : null }, h('a', { href: `#/fiche/${pid}` }, nomDe(bt[0])), h('span', { class: 'discret' }, ` · ${bt.length} · n° ${bt.map((b) => b.numero).join(', ')}`));
       });
-      remplacer(zone, h('div', { class: 'carte' }, lignes.length ? h('ul', { class: 'liste-simple' }, lignes) : h('p', { class: 'discret' }, 'Aucune bouteille ici.')));
+      remplacer(zone, bascule, h('div', { class: 'carte' }, lignes.length ? h('ul', { class: 'liste-simple' }, lignes) : h('p', { class: 'discret' }, 'Aucune bouteille ici.')));
     }
     const premier = trouves[0];
     resultat.textContent = choisi || recherche ? `${trouves.length} bouteille${trouves.length > 1 ? 's' : ''}${premier?.emplacement ? ` · ${libelleEmplacement(r, premier.emplacement)}` : ''}` : '';
@@ -158,7 +168,7 @@ async function ecranDetail(core, el, { id }) {
 
   // Sous-titre de la bouteille choisie : lieu, ou origine et niveau pour le bar.
   function detailChoix(b) {
-    if (vueDe(r) !== 'bar') return `${libelleEmplacement(r, b.emplacement) || r.nom} · voir le détail dans l'inventaire`;
+    if (vue() !== 'bar') return `${libelleEmplacement(r, b.emplacement) || r.nom} · voir le détail dans l'inventaire`;
     const p = produits.get(b.produit_id);
     const cl = Number(p?.extra?.volume_cl) || 70, niveau = b.etat === 'ouverte' ? b.niveau ?? 100 : 100;
     return [p?.region || DRAPEAUX[p?.pays]?.nom, b.etat === 'ouverte' ? `reste ${libelleNiveau(niveau)}` : 'pleine', `≈ ${versesRestants(niveau, cl)} verres`].filter(Boolean).join(' · ');
