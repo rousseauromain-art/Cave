@@ -1,5 +1,6 @@
 // Inventaire : matrice d'étiquettes, fiche dépliable, ajout/modification (stock 0 autorisé).
 import { ICONES } from '../../core/ui/icones.js';
+import { pictoProfil } from '../../core/ui/profils.js';
 import { ecranListe } from './liste.js';
 import { ecranFiche } from './fiche.js';
 import { ecranFormulaire } from './formulaire.js';
@@ -35,8 +36,8 @@ export default {
   titre: 'Cave',
   flag: { defaut: true, experimental: false },
   ecrans: [
-    { route: '/cave', titre: 'Cave', icone: ICONES.grille, place: 'nav', ordre: 20, rendu: ecranListe },
-    { route: '/fiche/:id', titre: 'Fiche', onglet: '/cave', rendu: ecranFiche },
+    { route: '/cave', titre: (p) => (p === 'vin' ? 'Vins' : 'Spiritueux'), icone: (p) => pictoProfil(p), place: 'nav', ordre: 20, rendu: ecranListe },
+    { route: '/fiche/:id', titre: (p) => (p === 'vin' ? 'Fiche vin' : 'Fiche spiritueux'), onglet: '/cave', rendu: ecranFiche },
     { route: '/produit/nouveau', titre: 'Nouveau', onglet: '/cave', rendu: (c, el) => ecranFormulaire(c, el, {}) },
     { route: '/produit/:id/modifier', titre: 'Modifier', onglet: '/cave', rendu: ecranFormulaire }
   ],

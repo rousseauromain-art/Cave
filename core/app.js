@@ -9,9 +9,11 @@ import { aller, routeCourante, demarrer, correspondance, requete } from './route
 import { h, icone, vider, ajouter } from './ui/dom.js';
 import { ICONES } from './ui/icones.js';
 import { initialiserSauvegarde } from './sauvegarde.js';
+import { selecteurProfil } from './ui/profils.js';
 
 const sauvegarde = initialiserSauvegarde();
 const core = {
+  selecteurProfil: () => selecteurProfil(profilCourant(), changerProfil),
   h, icone, ajouter, vider, ICONES, aller, sur, emettre, VERSION, profilCourant, basculerProfil, requete,
   store: sauvegarde.store,
   // Un écran peut préciser son titre (ex. le nom du vin sur une fiche).
@@ -23,6 +25,10 @@ const ecranReglages = {
   route: '/reglages', titre: 'Réglages', icone: ICONES.reglages, place: 'entete', ordre: 99,
   rendu: (c, el) => rendreReglages(el)
 };
+
+// Titre et icône d'un écran : texte fixe, ou fonction du profil (« Vins » / « Spiritueux »).
+const libelle = (e) => (typeof e.titre === 'function' ? e.titre(profilCourant()) : e.titre);
+const pictogramme = (e) => (typeof e.icone === 'function' ? e.icone(profilCourant()) : e.icone);
 
 function disponible(module) {
   return !module.profils || module.profils.includes(profilCourant());
@@ -47,13 +53,14 @@ function rendreNav() {
       href: '#' + e.route, class: `onglet${e.place === 'centre' ? ' onglet-centre' : ''}${actif ? ' actif' : ''}`,
       'aria-current': actif ? 'page' : false
     });
-    lien.append(e.place === 'centre' ? h('span', { class: 'rond' }, icone(e.icone, 26)) : icone(e.icone), e.titre);
+    lien.append(e.place === 'centre' ? h('span', { class: 'rond' }, icone(pictogramme(e), 26)) : icone(pictogramme(e)), libelle(e));
     nav.append(lien);
   }
 }
 
 function rendreEntete(ecran) {
-  document.getElementById('titre').textContent = ecran.titre;
+  document.getElementById('titre').textContent = libelle(ecran);
+  document.title = `${libelle(ecran)} · Cave`;
   const actions = vider(document.getElementById('actions'));
   const autre = profilCourant() === 'vin' ? 'spiritueux' : 'vin';
   const bascule = h('button', {
@@ -64,8 +71,8 @@ function rendreEntete(ecran) {
   actions.append(bascule);
   actions.append(sauvegarde.indicateur());
   for (const e of ecrans().filter((x) => x.place === 'entete')) {
-    const b = h('a', { href: '#' + e.route, class: 'bouton-rond', 'aria-label': e.titre });
-    b.append(icone(e.icone, 20));
+    const b = h('a', { href: '#' + e.route, class: 'bouton-rond', 'aria-label': libelle(e) });
+    b.append(icone(pictogramme(e), 20));
     actions.append(b);
   }
 }
@@ -79,6 +86,7 @@ function trouver(chemin) {
 }
 
 let rendus = 0;
+let derniereRoute = null;
 async function rendre() {
   const trouve = trouver(routeCourante());
   if (!trouve) {
@@ -100,10 +108,14 @@ async function rendre() {
     console.error(e);
   }
   if (numero !== rendus) return; // un rendu plus récent a pris la main
+  // Même écran redessiné (après une action) : on garde la position de défilement.
+  const memeEcran = derniereRoute === routeCourante();
+  const y = scrollY;
   vider(vue).append(neuf);
   vue.dataset.route = ecran.route;
+  derniereRoute = routeCourante();
   vue.focus({ preventScroll: true });
-  if (!ecran.garderDefilement) scrollTo(0, 0);
+  scrollTo(0, memeEcran ? y : 0);
 }
 
 function rendreReglages(el) {

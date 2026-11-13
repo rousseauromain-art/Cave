@@ -87,6 +87,17 @@ export async function ecranFormulaire(core, el, { id }) {
     const d = Object.fromEntries(new FormData(form));
     const msg = form.querySelector('.message');
     if (!d.nom?.trim()) { msg.textContent = 'Le nom est obligatoire.'; form.elements.nom.focus(); return; }
+    // Doublon probable (même nom et même millésime/âge) : proposer la fiche existante.
+    if (!existant && !form.dataset.doublonAccepte) {
+      const n = (x) => (x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      const double = (await core.store.list('produits')).find((x) => x.profil === profil && n(x.nom) === n(d.nom)
+        && String(x.millesime ?? '') === String(d.millesime ?? '') && String(x.age_ans ?? '') === String(d.age_ans ?? ''));
+      if (double) {
+        form.dataset.doublonAccepte = '1';
+        core.ajouter(core.vider(msg), ['Ce produit existe déjà : ', h('a', { href: `#/fiche/${double.id}` }, 'ouvrir sa fiche pour ajouter des bouteilles'), '. Ou touchez Enregistrer à nouveau pour créer une autre fiche.']);
+        return;
+      }
+    }
     const nombre = (v) => (v === '' || v === undefined ? null : Number(v));
     const produit = await core.store.put('produits', {
       ...p, profil,

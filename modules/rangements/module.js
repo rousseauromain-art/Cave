@@ -1,7 +1,7 @@
 // Rangements : placards, étagères, casiers. Vue en grille (culs de bouteille) avec recherche et halo jaune.
 import { remplacer } from '../../core/ui/dom.js';
 import { ICONES } from '../../core/ui/icones.js';
-import { inventaire, aGrille, emplacementsGrille, EN_CAVE } from '../../core/inventaire.js';
+import { inventaire, aGrille, emplacementsGrille, emplacementsLibres, EN_CAVE } from '../../core/inventaire.js';
 import { STYLES } from '../../data/styles.js';
 import { emplacement } from '../../core/ui/badges.js';
 
@@ -120,9 +120,61 @@ async function ecranDetail(core, el, { id }) {
     type: 'search', placeholder: 'Chercher un vin dans ce rangement', 'aria-label': 'Chercher un vin dans ce rangement',
     oninput: (e) => { recherche = e.target.value; choisi = null; dessiner(); }
   });
+  // Ranger ici des bouteilles qui n'ont pas encore de rangement (profil courant).
+  const profil = core.profilCourant();
+  const sansRangement = enCave.filter((b) => !b.rangement_id && produits.get(b.produit_id)?.profil === profil);
+  const parProduit = [...new Set(sansRangement.map((b) => b.produit_id))].map((pid) => ({ p: produits.get(pid), bt: sansRangement.filter((b) => b.produit_id === pid) }));
+  const msgRanger = h('p', { class: 'message', role: 'alert' });
+  const rangerIci = parProduit.length ? h('details', { class: 'section', 'data-carte': 'ranger-ici' },
+    h('summary', {}, h('span', { class: 'section-titre' }, 'Ranger ici'), h('span', { class: 'section-resume' }, `${sansRangement.length} sans rangement`)),
+    h('div', { class: 'section-corps' },
+      h('ul', { class: 'liste-cocher' }, parProduit.map(({ p, bt }) => h('li', {}, h('label', {}, h('input', { type: 'checkbox', value: p.id }), ` ${p.nom}`, h('span', { class: 'discret' }, ` · ${bt.length}`))))),
+      h('button', {
+        type: 'button', class: 'bouton principal', onclick: async (e) => {
+          const choisis = [...e.currentTarget.closest('.section-corps').querySelectorAll('input:checked')].map((x) => x.value);
+          const aRanger = sansRangement.filter((b) => choisis.includes(b.produit_id));
+          if (!aRanger.length) { msgRanger.textContent = 'Cochez au moins un produit.'; return; }
+          const libres = aGrille(r) ? await emplacementsLibres(core.store, r) : [];
+          if (aGrille(r) && libres.length < aRanger.length) { msgRanger.textContent = `Plus que ${libres.length} emplacement(s) libre(s).`; return; }
+          for (const [i, b] of aRanger.entries()) await core.store.put('bouteilles', { ...b, rangement_id: r.id, emplacement: libres[i] || b.emplacement || null });
+          core.aller(`/rangement/${r.id}`);
+        }
+      }, 'Ranger ici'),
+      msgRanger)) : null;
+
+  // Modifier / supprimer le rangement
+  const msgModif = h('p', { class: 'message', role: 'alert' });
+  const grilleR = ['casier', 'montrouge'].includes(r.type);
+  const formModif = h('form', { class: 'formulaire' },
+    h('label', { class: 'champ' }, h('span', { class: 'libelle' }, 'Nom'), h('input', { name: 'nom', value: r.nom, required: true })),
+    h('label', { class: 'champ' }, h('span', { class: 'libelle' }, 'Lieu'), h('input', { name: 'lieu', value: r.lieu || '' })),
+    grilleR ? h('div', { class: 'deux' },
+      h('label', { class: 'champ' }, h('span', { class: 'libelle' }, 'Rangées'), h('input', { name: 'lignes', type: 'number', min: '1', max: '30', value: String(r.lignes) })),
+      h('label', { class: 'champ' }, h('span', { class: 'libelle' }, 'Emplacements par rangée'), h('input', { name: 'colonnes', type: 'number', min: '1', max: '30', value: String(r.colonnes) }))) : null,
+    msgModif,
+    h('div', { class: 'boutons' },
+      h('button', { type: 'submit', class: 'bouton principal' }, 'Enregistrer'),
+      h('button', {
+        type: 'button', class: 'bouton danger', onclick: async () => {
+          if (ici.length) { msgModif.textContent = `Videz d\u2019abord le rangement (${ici.length} bouteille(s)).`; return; }
+          await core.store.remove('rangements', r.id);
+          core.aller('/rangements');
+        }
+      }, 'Supprimer ce rangement')));
+  formModif.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const d = Object.fromEntries(new FormData(formModif));
+    if (!d.nom.trim()) { msgModif.textContent = 'Le nom est obligatoire.'; return; }
+    await core.store.put('rangements', { ...r, nom: d.nom.trim(), lieu: d.lieu.trim() || null, ...(grilleR ? { lignes: Number(d.lignes), colonnes: Number(d.colonnes) } : {}) });
+    core.aller(`/rangement/${r.id}`);
+  });
+  const modifier = h('details', { class: 'section', 'data-carte': 'modifier-rangement' },
+    h('summary', {}, h('span', { class: 'section-titre' }, 'Modifier le rangement')),
+    h('div', { class: 'section-corps' }, formModif));
+
   const lienConnecte = r.type === 'montrouge' && core.moduleActif('montrouge')
     ? h('a', { href: `#/montrouge/${r.id}`, class: 'bouton principal grand' }, 'Casier connecté : capteurs en direct') : null;
-  core.ajouter(el, [lienConnecte, h('div', { class: 'recherche-casier' }, champ, resultat), zone, carteChoix]);
+  core.ajouter(el, [lienConnecte, h('div', { class: 'recherche-casier' }, champ, resultat), zone, carteChoix, rangerIci, modifier]);
   dessiner();
 }
 

@@ -40,6 +40,7 @@ export async function ecranListe(core, el) {
 
   el.append(
     h('div', { class: 'bandeau' },
+      core.selecteurProfil(),
       h('p', { class: 'resume' }, `${bouteilles} bouteille${bouteilles > 1 ? 's' : ''} · ${tous.length} ${profil === 'vin' ? 'vin' : 'flacon'}${tous.length > 1 ? 's' : ''} · ${pays} origine${pays > 1 ? 's' : ''}`),
       h('label', { class: 'recherche' },
         h('span', { class: 'masque' }, 'Rechercher'),

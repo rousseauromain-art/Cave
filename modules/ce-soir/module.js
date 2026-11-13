@@ -10,6 +10,7 @@ async function ecran(core, el) {
   const { h } = core;
   const profil = core.profilCourant();
   const tous = (await inventaire(core.store, profil)).filter((p) => p.stock > 0);
+  el.append(h('div', { class: 'bandeau' }, core.selecteurProfil()));
   if (!tous.length) {
     el.append(h('p', { class: 'vide' }, 'Rien en stock pour l’instant. Ajoutez des bouteilles dans la Cave.'));
     return;

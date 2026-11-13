@@ -4,7 +4,7 @@ import { emettre } from './evenements.js';
 
 export const PROFILS = {
   vin: { titre: 'Vins', couleurMeta: '#4A0B22' },
-  spiritueux: { titre: 'Spiritueux', couleurMeta: '#2B1A10' }
+  spiritueux: { titre: 'Spiritueux', couleurMeta: '#7A4512' }
 };
 
 let profil = PROFILS[lire('profil')] ? lire('profil') : 'vin';
