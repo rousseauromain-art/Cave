@@ -6,6 +6,7 @@ import { adaptateurSupabase, sessionMemorisee } from './supabase.js';
 import { emettre, sur } from './evenements.js';
 import { h, vider, icone } from './ui/dom.js';
 import { etatAncienneApp, estFormatV9, importerV9 } from './import-v9.js';
+import { estFormatPhotos, importerPhotos } from './import-photos.js';
 
 const LIBELLES = {
   ok: 'Sauvegardé',
@@ -124,7 +125,10 @@ export function initialiserSauvegarde({ adaptateur = adaptateurSupabase } = {}) 
         if (!f) return;
         try {
           const donnees = JSON.parse(await f.text());
-          if (estFormatV9(donnees)) {
+          if (estFormatPhotos(donnees)) {
+            const b = await importerPhotos(store, donnees);
+            message.replaceChildren(`${b.associees} photo(s) associée(s)${b.introuvables.length ? ` ; sans fiche correspondante : ${b.introuvables.join(', ')}` : ''}. `, h('a', { href: '#/cave' }, 'Voir la cave'));
+          } else if (estFormatV9(donnees)) {
             const b = await importerV9(store, donnees);
             remplacer(message, bilanV9(b), ' ', h('a', { href: '#/cave' }, 'Voir ma cave'));
           } else {

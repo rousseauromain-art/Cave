@@ -23,7 +23,7 @@
   position: relative; display: flex; align-items: center; justify-content: center; height: 136px; padding: 0 8px;
   border-radius: 14px; overflow: hidden; background: var(--c-bord); color: var(--c-texte); text-align: center;
 }
-.visuel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.visuel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 68%; } /* l'étiquette est dans la moitié basse */
 .visuel.sans-stock { opacity: .55; }
 .etiquette-generee { display: flex; flex-direction: column; gap: 4px; }
 .etiquette-generee .nom-court { font-family: var(--police-titre); font-weight: 600; font-size: 15px; line-height: 1.1; overflow-wrap: anywhere; }
@@ -45,7 +45,7 @@
 
 /* Fiche */
 .fiche-photo { position: relative; height: 300px; margin: -16px -16px 0; display: flex; align-items: center; justify-content: center; background: var(--c-entete); color: var(--c-entete-texte); overflow: hidden; }
-.fiche-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.fiche-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 62%; }
 .fiche-photo img ~ .etiquette-generee { visibility: hidden; }
 .etiquette-generee.grande .nom-court { font-size: 28px; }
 .etiquette-generee.grande .annee { font-size: 18px; }
