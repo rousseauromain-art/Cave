@@ -75,6 +75,9 @@ test.describe('écran Scanner', () => {
     await expect(page.getByLabel('Millésime')).toHaveValue('2018');
     await expect(page.locator('.apercu-photo img')).toBeVisible();
     await page.getByRole('button', { name: 'Enregistrer' }).click();
+    // Le vin existe déjà : la fiche existante est proposée ; un second Enregistrer crée quand même la fiche.
+    await expect(page.getByRole('link', { name: 'ouvrir sa fiche pour ajouter des bouteilles' })).toBeVisible();
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page.locator('.fiche-photo img')).toBeVisible();
   });
 

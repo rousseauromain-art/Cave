@@ -16,7 +16,11 @@ test.beforeEach(async ({ page }) => {
   await page.goto('./#/cave');
 });
 
-const onglet = (page, nom) => page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: nom, exact: true }).click();
+// L'onglet de la cave s'appelle « Vins » ou « Spiritueux » selon le profil.
+const onglet = async (page, nom) => {
+  if (nom === 'Cave') nom = (await page.locator('html').getAttribute('data-profil')) === 'spiritueux' ? 'Spiritueux' : 'Vins';
+  return page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: nom, exact: true }).click();
+};
 
 async function ajouterVin(page, { nom, style, pays, quantite, rangement, profil }) {
   await onglet(page, 'Cave');
@@ -67,12 +71,12 @@ test('S1-03 vignette : compteur, pastille, drapeau, note ; recherche', async ({ 
 
 test('S1-04 ouvrir une bouteille diminue le stock ; ajouter en remet', async ({ page }) => {
   await ajouterVin(page, { nom: 'Stock Test', style: 'rouge', quantite: 2 });
-  await expect(page.locator('.liste-bouteilles li')).toHaveCount(2);
+  await expect(page.locator('.liste-bouteilles.en-cave li')).toHaveCount(2);
   await page.getByRole('button', { name: 'Ouvrir une bouteille' }).click();
-  await expect(page.locator('.liste-bouteilles li')).toHaveCount(1);
+  await expect(page.locator('.liste-bouteilles.en-cave li')).toHaveCount(1);
   await page.getByLabel('Nombre de bouteilles').fill('3');
   await page.getByRole('button', { name: '+ Ajouter' }).click();
-  await expect(page.locator('.liste-bouteilles li')).toHaveCount(4);
+  await expect(page.locator('.liste-bouteilles.en-cave li')).toHaveCount(4);
 });
 
 test('S1-05 casier : bouteilles placées, recherche et halo jaune, localiser depuis la fiche', async ({ page }) => {

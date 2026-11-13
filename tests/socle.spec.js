@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 test('ouvre le premier onglet et navigue entre les 5 onglets', async ({ page }) => {
   await expect(page).toHaveURL(/#\/ce-soir$/);
   const nav = page.getByRole('navigation', { name: 'Navigation principale' });
-  for (const nom of ['Ce soir', 'Cave', 'Scanner', 'Dégustations', 'Rangements']) {
+  for (const nom of ['Ce soir', 'Vins', 'Scanner', 'Dégustations', 'Rangements']) {
     await nav.getByRole('link', { name: nom }).click();
     await expect(page.locator('#titre')).toHaveText(nom);
     await expect(nav.getByRole('link', { name: nom })).toHaveAttribute('aria-current', 'page');
@@ -38,7 +38,7 @@ test('un module désactivé sur son écran renvoie à l’accueil', async ({ pag
   await page.evaluate(() => localStorage.setItem('cave.flags', JSON.stringify({ cave: false })));
   await page.reload();
   await expect(page).toHaveURL(/#\/ce-soir$/);
-  await expect(page.getByRole('link', { name: 'Cave' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Vins', exact: true })).toHaveCount(0);
 });
 
 test('la bascule de profil change les couleurs sans rechargement et est mémorisée', async ({ page }) => {
@@ -46,7 +46,7 @@ test('la bascule de profil change les couleurs sans rechargement et est mémoris
   await expect(entete).toHaveCSS('background-color', 'rgb(74, 11, 34)');
   await page.locator('[data-test="bascule-profil"]').click();
   await expect(page.locator('html')).toHaveAttribute('data-profil', 'spiritueux');
-  await expect(entete).toHaveCSS('background-color', 'rgb(43, 26, 16)');
+  await expect(entete).toHaveCSS('background-color', 'rgb(122, 69, 18)');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-profil', 'spiritueux');
   await page.locator('[data-test="bascule-profil"]').click();

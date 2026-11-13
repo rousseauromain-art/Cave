@@ -1,11 +1,11 @@
-/* Profil Spiritueux : tourbe et ambre */
+/* Profil Spiritueux : cuivre et ambre (nettement distinct du bordeaux) */
 [data-profil="spiritueux"] {
-  --c-entete: #2B1A10;
+  --c-entete: #7A4512;
   --c-entete-texte: #FFFFFF;
-  --c-entete-texte-2: #E9D6BE;
-  --c-accent: #8A4F12;
-  --c-accent-fonce: #5E340B;
-  --c-ombre-accent: rgba(138, 79, 18, 0.35);
+  --c-entete-texte-2: #F5DFC0;
+  --c-accent: #9A5414;
+  --c-accent-fonce: #6E3E10;
+  --c-ombre-accent: rgba(154, 84, 20, 0.35);
   --c-fond: #F7F1E8;
   --c-surface: #FFFFFF;
   --c-texte: #1E1610;
