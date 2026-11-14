@@ -161,6 +161,12 @@
 .mot-libre, .resultat-mesure ~ .carte textarea { width: 100%; border-radius: 12px; border: 1.5px dashed var(--c-bord-fort); padding: 10px; font: inherit; font-size: 14px; background: var(--c-surface); color: var(--c-texte); margin-bottom: 8px; }
 section.carte textarea { width: 100%; border-radius: 12px; border: 1.5px solid var(--c-bord-fort); padding: 10px; font: inherit; font-size: 14px; background: var(--c-surface); color: var(--c-texte); }
 .historique { list-style: none; margin: 12px 0 0; padding: 0; }
+.item-degustation { display: flex; align-items: center; gap: 4px; padding: 0 4px 0 0; margin: 0 0 8px; }
+.item-degustation .ligne-historique { flex: 1; min-width: 0; }
+.historique.dans-fiche .item-degustation { box-shadow: none; border: 1px solid var(--c-bord); }
+.bouton-supprimer { min-width: 40px; min-height: 40px; border: 0; background: none; color: var(--c-texte-2); border-radius: 10px; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; padding: 0 6px; }
+.bouton-supprimer[data-confirmer] { color: #FFFFFF; background: var(--c-declin); max-width: 120px; line-height: 1.2; }
+.commentaire-degustation { font-size: 13px; color: var(--c-texte); white-space: pre-wrap; }
 .ligne-historique { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--c-texte); padding: 10px 12px; }
 .ligne-texte { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 14px; min-width: 0; }
 .note-historique { font-weight: 700; color: var(--c-accent); }
@@ -300,3 +306,9 @@ a.bouton { text-decoration: none; }
 .boutons-scan { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .boutons-scan .bouton { justify-content: center; }
 .lien-galerie { font-size: 13px; color: var(--c-accent); text-decoration: underline; min-height: 40px; display: flex; align-items: center; cursor: pointer; }
+/* Catégorie personnelle */
+.nouvelle-categorie { border: 1px solid var(--c-bord); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+.couleurs-perso { display: flex; gap: 8px; flex-wrap: wrap; }
+.couleur-perso { width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.couleur-perso input { appearance: none; width: 40px; height: 40px; border-radius: 20px; margin: 0; cursor: pointer; }
+.couleur-perso input:checked { box-shadow: inset 0 0 0 3px #FFFFFF; outline: 3px solid var(--c-accent); }

@@ -83,9 +83,9 @@ test.describe('écran Dégustation', () => {
     await page.getByRole('radio', { name: '4 sur 5' }).click();
     await page.getByRole('button', { name: 'Enregistrer la dégustation' }).click();
     await expect(page).toHaveURL(new RegExp(`#/fiche/${id}`));
-    await expect(page.locator('[data-section="profil"] svg.radar')).toBeVisible();
+    await expect(page.locator('[data-section="profil"] .profil-fiche svg.radar')).toBeVisible();
     await expect(page.locator('[data-section="profil"] .section-resume')).toHaveText('1 mesure');
-    await expect(page.locator('[data-section="profil"]').getByText('Poivre')).toBeVisible();
+    await expect(page.locator('[data-section="profil"] .profil-fiche').getByText('Poivre')).toBeVisible();
     await expect(page.getByLabel('Note 4 sur 5')).toBeVisible();
     await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Dégustations', exact: true }).click();
     await expect(page.locator('.ligne-historique')).toHaveCount(1);

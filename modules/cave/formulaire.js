@@ -1,6 +1,6 @@
 // Ajout et modification d'un produit (stock 0 autorisé, sans mesure).
 import { remplacer } from '../../core/ui/dom.js';
-import { STYLES } from '../../data/styles.js';
+import { STYLES, COULEURS_PERSO, categoriesPerso, clePerso } from '../../data/styles.js';
 import { DRAPEAUX } from '../../data/drapeaux.js';
 import { ajouterBouteilles, aGrille, emplacementsLibres } from '../../core/inventaire.js';
 import { compresser, urlPhoto, oublierPhoto } from '../../core/photos.js';
@@ -42,6 +42,19 @@ export async function ecranFormulaire(core, el, { id }) {
   });
 
   const vin = profil === 'vin';
+  // Catégories : celles de l'app, celles déjà créées dans d'autres fiches, ou une nouvelle (nom + couleur).
+  const persos = categoriesPerso(await core.store.list('produits'), profil);
+  const choixStyle = h('select', { name: 'style', onchange: (e) => { nouvelleCategorie.hidden = e.target.value !== '__nouvelle'; } },
+    h('option', { value: '' }, '—'),
+    Object.entries(STYLES[profil]).map(([k, s]) => h('option', { value: k, selected: p.style === k }, s.titre)),
+    Object.entries(persos).map(([k, s]) => h('option', { value: k, selected: p.style === k }, s.titre)),
+    h('option', { value: '__nouvelle' }, '+ Nouvelle catégorie…'));
+  const nouvelleCategorie = h('fieldset', { class: 'nouvelle-categorie', hidden: true },
+    h('legend', {}, 'Nouvelle catégorie'),
+    champ(h, 'Nom', h('input', { name: 'style_titre', autocomplete: 'off', placeholder: 'ex. Finition vin' })),
+    h('div', { class: 'couleurs-perso', role: 'radiogroup', 'aria-label': 'Couleur de la pastille' },
+      COULEURS_PERSO.map((c, i) => h('label', { class: 'couleur-perso', style: { background: c } },
+        h('input', { type: 'radio', name: 'style_couleur', value: c, checked: i === 0, 'aria-label': `Couleur ${i + 1}` })))));
   // Forme de la bouteille (dessin du bar) : choisie ici seulement, à la création ou en modification.
   const forme = h('input', { type: 'hidden', name: 'forme', value: formeDe(p) });
   const choixForme = vin ? null : h('div', { class: 'champ' }, h('span', { class: 'libelle' }, 'Forme de la bouteille (vue du bar)'),
@@ -58,7 +71,8 @@ export async function ecranFormulaire(core, el, { id }) {
     h('div', { class: 'deux' },
       vin ? champ(h, 'Millésime', entree('millesime', { type: 'number', inputmode: 'numeric', min: '1900', max: '2100' }))
         : champ(h, 'Âge (ans)', entree('age_ans', { type: 'number', inputmode: 'numeric', min: '0', max: '80' })),
-      champ(h, vin ? 'Couleur / style' : 'Catégorie', select('style', Object.entries(STYLES[profil]).map(([k, s]) => [k, s.titre]), '—'))),
+      champ(h, vin ? 'Couleur / style' : 'Catégorie', choixStyle)),
+    nouvelleCategorie,
     h('div', { class: 'deux' },
       champ(h, 'Origine', select('pays', Object.entries(DRAPEAUX).map(([k, d]) => [k, d.nom]), '—')),
       champ(h, 'Région', entree('region'))),
@@ -109,16 +123,20 @@ export async function ecranFormulaire(core, el, { id }) {
       }
     }
     const nombre = (v) => (v === '' || v === undefined ? null : Number(v));
+    const style = d.style === '__nouvelle' && d.style_titre?.trim()
+      ? { cle: clePerso(d.style_titre.trim()), perso: { titre: d.style_titre.trim(), pastille: d.style_couleur || COULEURS_PERSO[0] } }
+      : d.style === '__nouvelle' ? { cle: null, perso: null }
+        : { cle: d.style || null, perso: persos[d.style] || null };
     const produit = await core.store.put('produits', {
       ...p, profil,
       nom: d.nom.trim(), producteur: d.producteur?.trim() || null, cuvee: d.cuvee?.trim() || null,
-      millesime: nombre(d.millesime), age_ans: nombre(d.age_ans), style: d.style || null, pays: d.pays || null,
+      millesime: nombre(d.millesime), age_ans: nombre(d.age_ans), style: style.cle, pays: d.pays || null,
       region: d.region?.trim() || null, appellation: d.appellation?.trim() || null, degre: nombre(d.degre),
       cepages: vin ? d.cepages?.trim() || null : p.cepages ?? null,
       fut: d.fut?.trim() || null, apogee_debut: nombre(d.apogee_debut), apogee_fin: nombre(d.apogee_fin),
       note: d.note === '' ? null : Math.max(0, Math.min(5, Number(d.note))), commentaire: d.commentaire?.trim() || null,
       photo_path: nouvellePhoto ? null : p.photo_path ?? null,
-      extra: vin ? p.extra ?? {} : { ...(p.extra || {}), volume_cl: Number(d.volume_cl) || 70, forme: d.forme || null }
+      extra: { ...(vin ? p.extra ?? {} : { ...(p.extra || {}), volume_cl: Number(d.volume_cl) || 70, forme: d.forme || null }), style_perso: style.perso }
     });
     if (nouvellePhoto) {
       await core.store.enregistrerPhoto(produit.id, nouvellePhoto);

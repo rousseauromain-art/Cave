@@ -1,16 +1,8 @@
 // Accès aux mesures et dégustations, et reprise de l'historique MyOeno de la v9.3.
 import { moyenne } from '../../core/ui/radar.js';
+export { historique, supprimerDegustation } from '../../core/degustations.js';
 
 const normaliser = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-
-export async function historique(store) {
-  const [mesures, degustations, produits] = await Promise.all([store.list('mesures'), store.list('degustations'), store.list('produits')]);
-  const parId = new Map(produits.map((p) => [p.id, p]));
-  const degParMesure = new Map(degustations.filter((d) => d.mesure_id).map((d) => [d.mesure_id, d]));
-  const lignes = mesures.map((m) => ({ mesure: m, degustation: degParMesure.get(m.id) || null, produit: parId.get(m.produit_id) || null, quand: m.mesure_le }));
-  for (const d of degustations.filter((x) => !x.mesure_id)) lignes.push({ mesure: null, degustation: d, produit: parId.get(d.produit_id) || null, quand: d.le });
-  return lignes.sort((a, b) => String(b.quand).localeCompare(String(a.quand)));
-}
 
 // Moyenne des vins mesurés du même style (hors produit courant).
 export async function moyenneDuStyle(store, style, sauf) {

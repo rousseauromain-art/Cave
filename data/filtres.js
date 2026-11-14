@@ -18,7 +18,16 @@ export const FILTRES = {
     { id: 'tourbes', titre: 'Tourbés', test: parStyle('tourbe') },
     { id: 'malts', titre: 'Single malts', test: parStyle('malt', 'sherry', 'tourbe') },
     { id: 'rhums', titre: 'Rhums', test: parStyle('rhum') },
-    { id: 'cognac', titre: 'Cognac & EDV', test: parStyle('cognac', 'edv') },
+    { id: 'brutfut', titre: 'Brut de fût', test: parStyle('brutfut') },
+    { id: 'cognac', titre: 'Cognac & EDV', test: parStyle('cognac', 'edv', 'calvados') },
     { id: 'sans-stock', titre: 'Sans stock', test: (p) => p.stock === 0 }
   ]
 };
+
+// Filtres de l'inventaire : ceux du profil, plus un par catégorie personnelle utilisée (avant « Sans stock »).
+export function filtresPour(profil, produits) {
+  const base = FILTRES[profil];
+  const perso = [...new Map(produits.filter((p) => p.style?.startsWith('perso-') && p.styleInfo).map((p) => [p.style, p.styleInfo.titre])).entries()]
+    .map(([cle, titre]) => ({ id: cle, titre, test: parStyle(cle) }));
+  return [...base.slice(0, -1), ...perso, base.at(-1)];
+}

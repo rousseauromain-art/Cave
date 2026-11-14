@@ -6,6 +6,7 @@ import { inventaire, nomComplet } from '../../core/inventaire.js';
 import { urlPhoto } from '../../core/photos.js';
 import { creerScanner, bluetoothDisponible } from './ble.js';
 import { ETATS, decrire, motsCles } from './calcul.js';
+import { ligneDegustation } from '../../core/ui/degustation.js';
 import { historique, moyenneDuStyle, enregistrer, historiqueV9, importerHistoriqueV9 } from './donnees.js';
 
 const ETAPES = ['Prêt', 'Dans le verre', 'Mesure', 'Résultat'];
@@ -155,14 +156,7 @@ async function ecranHistorique(core, el) {
   const lignes = (await historique(core.store)).filter((l) => !l.produit || l.produit.profil === profil);
   el.append(h('div', { class: 'bandeau' }, core.selecteurProfil()), h('a', { href: '#/mesure', class: 'bouton principal grand' }, core.icone(ICONES.etoile, 20), 'Nouvelle dégustation'));
   if (!lignes.length) { el.append(h('p', { class: 'vide' }, 'Aucune dégustation pour l’instant.')); return; }
-  el.append(h('ul', { class: 'historique' }, lignes.map(({ mesure, degustation, produit }) => h('li', {},
-    h('a', { href: produit ? `#/fiche/${produit.id}` : '#/degustations', class: 'carte ligne-historique' },
-      mesure ? radar(mesure, { taille: 56, etiquettes: false }) : h('span', { class: 'vignette-vide petite' }),
-      h('span', { class: 'ligne-texte' },
-        h('strong', {}, produit ? nomComplet(produit) : 'Verre non rattaché'),
-        h('span', { class: 'discret' }, [String((mesure?.mesure_le || degustation?.le || '')).slice(0, 10), mesure ? `P ${mesure.puissance} · T ${mesure.tanins} · V ${mesure.vivacite}` : null].filter(Boolean).join(' · ')),
-        degustation?.mots_cles?.length ? h('span', { class: 'discret' }, degustation.mots_cles.join(', ')) : null),
-      degustation?.note ? h('span', { class: 'note-historique' }, `★ ${degustation.note}`) : null)))));
+  el.append(h('ul', { class: 'historique' }, lignes.map((l) => ligneDegustation(core, l))));
 }
 
 function reglages(core, el) {
