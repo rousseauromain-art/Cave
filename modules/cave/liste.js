@@ -1,7 +1,7 @@
 // Écran « Cave » : matrice d'étiquettes du profil courant, filtres, recherche.
 import { remplacer } from '../../core/ui/dom.js';
 import { inventaire } from '../../core/inventaire.js';
-import { FILTRES } from '../../data/filtres.js';
+import { filtresPour } from '../../data/filtres.js';
 import { tuile } from './tuile.js';
 
 let filtreCourant = 'tout';
@@ -13,7 +13,7 @@ export async function ecranListe(core, el) {
   const { h } = core;
   const profil = core.profilCourant();
   const tous = await inventaire(core.store, profil);
-  const filtres = FILTRES[profil];
+  const filtres = filtresPour(profil, tous);
   if (!filtres.some((f) => f.id === filtreCourant)) filtreCourant = 'tout';
 
   const bouteilles = tous.reduce((n, p) => n + p.stock, 0);

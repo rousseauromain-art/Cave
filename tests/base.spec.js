@@ -207,3 +207,57 @@ test('S8-02 création d\u2019un rangement : types et collection selon le profil'
   await page.locator('[data-profil-choix="vin"]').click();
   await expect(page.getByText('Vitrine salon')).toHaveCount(0);
 });
+
+test('S10-01 dégustation d’un whisky : visible dans la fiche, supprimable (fiche et historique)', async ({ page }) => {
+  await page.locator('[data-profil-choix="spiritueux"]').click();
+  const w = await id(page, 'whisky');
+  for (const [note, mot] of [[4, 'Tourbé'], [2, 'Iodé']]) {
+    await page.goto(`./#/mesure?produit=${w}`);
+    await page.getByRole('radio', { name: `${note} sur 5` }).click();
+    await page.getByLabel('Ajouter un mot-clé').fill(mot);
+    await page.getByLabel('Ajouter un mot-clé').press('Enter');
+    await page.getByLabel('Commentaire').fill(`Essai ${mot}`);
+    await page.getByRole('button', { name: 'Enregistrer la dégustation' }).click();
+    await expect(page).toHaveURL(/#\/fiche\//);
+  }
+  await page.locator('[data-section="profil"]').evaluate((d) => { d.open = true; });
+  await expect(page.locator('.dans-fiche .item-degustation')).toHaveCount(2);
+  await expect(page.locator('.dans-fiche')).toContainText('Essai Tourbé');
+  // Suppression en deux touches ; la note du whisky revient à la dégustation restante
+  const btn = page.locator('.dans-fiche .bouton-supprimer').first();
+  await btn.click();
+  await expect(btn).toHaveText('Supprimer ?');
+  await btn.click();
+  await expect(page.locator('.dans-fiche .item-degustation')).toHaveCount(1);
+  const note = await page.evaluate(async (x) => (await (await import('/core/store.js')).creerStore('cave').get('produits', x)).note, w);
+  expect(note).toBe(4);
+  // Depuis l'écran Dégustations
+  await page.goto('./#/degustations');
+  await expect(page.locator('.historique .item-degustation')).toHaveCount(1);
+  await page.locator('.historique .bouton-supprimer').click();
+  await page.locator('.historique .bouton-supprimer').click();
+  await expect(page.locator('.historique .item-degustation')).toHaveCount(0);
+});
+
+test('S10-02 catégories : Brut de fût intégré, catégorie personnelle créée et réutilisée, filtre', async ({ page }) => {
+  await page.locator('[data-profil-choix="spiritueux"]').click();
+  await page.goto(`./#/produit/${await id(page, 'whisky')}/modifier`);
+  await page.locator('select[name="style"]').selectOption({ label: 'Brut de fût (cask strength)' });
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page).toHaveURL(/#\/fiche\//);
+  await page.goto('./#/produit/nouveau');
+  await page.locator('input[name="nom"]').fill('Finition Test');
+  await page.locator('select[name="style"]').selectOption('__nouvelle');
+  await expect(page.locator('.nouvelle-categorie')).toBeVisible();
+  await page.locator('input[name="style_titre"]').fill('Finition vin');
+  await page.getByLabel('Couleur 3').check();
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page).toHaveURL(/#\/fiche\//);
+  await page.goto('./#/produit/nouveau');
+  await expect(page.locator('select[name="style"] option', { hasText: 'Finition vin' })).toHaveCount(1);
+  await page.goto('./#/cave');
+  await page.getByRole('button', { name: 'Brut de fût', exact: true }).click();
+  await expect(page.locator('.matrice')).toContainText('Whisky Test');
+  await page.getByRole('button', { name: 'Finition vin', exact: true }).click();
+  await expect(page.locator('.matrice')).toContainText('Finition Test');
+});

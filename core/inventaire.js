@@ -1,12 +1,12 @@
 // Règles métier de l'inventaire, partagées par les modules Cave, Rangements, Ce soir, Dégustations.
-import { STYLES } from '../data/styles.js';
+import { STYLES, stylePerso } from '../data/styles.js';
 import { chargerTable, estimer, phase, PHASES } from './apogee.js';
 import { grilleDe } from './rangements.js';
 
 export const EN_CAVE = ['stock', 'ouverte'];
 
 export function styleDe(produit) {
-  return STYLES[produit.profil]?.[produit.style] || null;
+  return STYLES[produit.profil]?.[produit.style] || (produit.style?.startsWith('perso-') ? stylePerso(produit.extra?.style_perso) : null);
 }
 
 export function nomComplet(p) {

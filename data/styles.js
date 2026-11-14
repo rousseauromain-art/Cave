@@ -20,6 +20,33 @@ export const STYLES = {
     bourbon: { titre: 'Bourbon', pastille: '#A4501F', fond: '#9C4A1A', texte: '#FFFFFF' },
     rhum: { titre: 'Rhum', pastille: '#5E3218', fond: '#6E3C1E', texte: '#FFFFFF' },
     cognac: { titre: 'Cognac / Armagnac', pastille: '#B5651D', fond: '#D48A45', texte: '#2B1A08' },
-    edv: { titre: 'Eau-de-vie blanche', pastille: '#EDE6D3', fond: '#F3EEDF', texte: '#3A3020' }
+    edv: { titre: 'Eau-de-vie blanche', pastille: '#EDE6D3', fond: '#F3EEDF', texte: '#3A3020' },
+    brutfut: { titre: 'Brut de fût (cask strength)', pastille: '#5B2333', fond: '#6B2A3C', texte: '#FFFFFF' },
+    grain: { titre: 'Single grain', pastille: '#E3C77E', fond: '#F0DDA8', texte: '#2B1A08' },
+    rye: { titre: 'Rye', pastille: '#8A5A2B', fond: '#9A6634', texte: '#FFFFFF' },
+    calvados: { titre: 'Calvados', pastille: '#C7792E', fond: '#DC9A55', texte: '#2B1A08' },
+    gin: { titre: 'Gin', pastille: '#9EC3C6', fond: '#D6E8E9', texte: '#173436' },
+    liqueur: { titre: 'Liqueur', pastille: '#8E2C4F', fond: '#9E3A5E', texte: '#FFFFFF' }
   }
 };
+
+// Couleurs proposées pour une catégorie créée par l'utilisateur.
+export const COULEURS_PERSO = ['#2F5D50', '#3B4F7A', '#6A3D7A', '#8E2C4F', '#B3541E', '#C9A227', '#5E6B2E', '#4A4A4A'];
+
+// Catégorie créée dans une fiche : portée par le produit (extra.style_perso), donc synchronisée avec lui.
+export function stylePerso(sp) {
+  if (!sp?.titre || !/^#[0-9a-f]{6}$/i.test(sp.pastille || '')) return null;
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(sp.pastille.slice(i, i + 2), 16) / 255);
+  const clair = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5;
+  return { titre: sp.titre, pastille: sp.pastille, fond: sp.pastille, texte: clair ? '#1E1610' : '#FFFFFF', perso: true };
+}
+
+// Clé de style d'une catégorie personnelle (« perso-brut-de-fut »).
+export const clePerso = (titre) => 'perso-' + titre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+// Catégories personnelles déjà utilisées dans les produits d'un profil : { cle: { titre, pastille } }.
+export function categoriesPerso(produits, profil) {
+  const r = {};
+  for (const p of produits) if (p.profil === profil && p.style?.startsWith('perso-') && stylePerso(p.extra?.style_perso)) r[p.style] = p.extra.style_perso;
+  return r;
+}
