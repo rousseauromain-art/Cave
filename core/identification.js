@@ -110,6 +110,13 @@ export function profilProbable(texte, { appellation = null, cepages = [] } = {})
   return vin && !spiritueux ? 'vin' : spiritueux && !vin ? 'spiritueux' : null;
 }
 
+// Texte tout en capitales (« RABASSIÈRE ») → casse de titre (« Rabassière ») ; sinon inchangé.
+const PETITS = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'et', 'en', 'sur', 'aux', 'au', "d'", "l'"]);
+export function casse(t) {
+  if (!t || t !== t.toUpperCase() || !/[A-ZÀ-Ý]{2}/.test(t)) return t;
+  return t.toLowerCase().replace(/(^|[\s\-'’])([a-zà-ÿ]+)/g, (m, sep, mot, i) => sep + (i > 0 && PETITS.has(mot) ? mot : mot[0].toUpperCase() + mot.slice(1)));
+}
+
 // Lignes OCR [{texte, hauteur}] → champs. Exportée pour les tests.
 export function analyserTexte(lignes, index = [], annee = new Date().getFullYear()) {
   const propres = lignes.map((l) => ({ t: l.texte.replace(/\s+/g, ' ').trim(), h: l.hauteur ?? 20 })).filter((l) => l.t);
@@ -150,7 +157,7 @@ export function analyserTexte(lignes, index = [], annee = new Date().getFullYear
   // Couleur : écrite sur l'étiquette, sinon celle de tous les cépages lus s'ils concordent.
   const couleurs = [...new Set(cepages.map((c) => c.couleur))];
   return {
-    nom: candidats[0]?.t || domaine || '', producteur: domaine || null, appellation,
+    nom: casse(candidats[0]?.t || domaine || ''), producteur: casse(domaine) || null, appellation,
     millesime: annees[0] ?? null, style: style || (couleurs.length === 1 ? couleurs[0] : null), styleDeduit: !style && couleurs.length === 1,
     degre: degre ? nombre(degre[1]) : null, cepages: cepages.map((c) => c.nom).join(', ') || null,
     volume_cl: cl ? Number(cl[1]) : ml ? Number(ml[1]) / 10 : null,
@@ -284,3 +291,23 @@ export function rapprocher(trouve, produits, max = 3) {
 let brouillon = null;
 export function deposerBrouillon(b) { brouillon = b; }
 export function prendreBrouillon() { const b = brouillon; brouillon = null; return b; }
+
+// Mise à jour d'une fiche existante avec une lecture : champs qui diffèrent, cochés d'office quand la fiche est vide.
+const CHAMPS_MAJ = [['nom', 'Nom'], ['producteur', 'Domaine / producteur'], ['appellation', 'Appellation'], ['region', 'Région'], ['millesime', 'Millésime'],
+  ['age_ans', 'Âge'], ['style', 'Couleur / catégorie'], ['degre', 'Degré'], ['cepages', 'Cépages']];
+export function differences(produit, trouve) {
+  return CHAMPS_MAJ.filter(([k]) => trouve[k] !== null && trouve[k] !== undefined && trouve[k] !== '' && String(trouve[k]).trim() !== String(produit[k] ?? '').trim())
+    .map(([cle, libelle]) => ({ cle, libelle, avant: produit[cle] ?? null, apres: trouve[cle], coche: produit[cle] === null || produit[cle] === undefined || produit[cle] === '' }));
+}
+
+// Produit mis à jour : champs choisis, texte lu conservé, verso ajouté aux notes, contenance si absente.
+export function fusionnerLecture(produit, trouve, cles) {
+  const maj = { ...produit };
+  for (const k of cles) maj[k] = trouve[k];
+  const extra = { ...(produit.extra || {}) };
+  if (trouve.texte || trouve.texte_verso) extra.texte_lu = { recto: trouve.texte || extra.texte_lu?.recto || null, verso: trouve.texte_verso || extra.texte_lu?.verso || null };
+  if (trouve.volume_cl && !extra.volume_cl) extra.volume_cl = trouve.volume_cl;
+  maj.extra = extra;
+  if (trouve.texte_verso && !(produit.commentaire || '').includes(trouve.texte_verso)) maj.commentaire = [produit.commentaire, trouve.texte_verso].filter(Boolean).join('\n\n');
+  return maj;
+}

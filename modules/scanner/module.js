@@ -1,8 +1,8 @@
 // Scanner : photo d'étiquette → identification → vin de la cave reconnu, ou nouvelle fiche préremplie.
 import { remplacer } from '../../core/ui/dom.js';
 import { ICONES } from '../../core/ui/icones.js';
-import { compresser } from '../../core/photos.js';
-import { identifier, rapprocher, deposerBrouillon, lireTexte, completerAvecVerso } from '../../core/identification.js';
+import { identifier, rapprocher, deposerBrouillon, lireTexte, completerAvecVerso, differences, fusionnerLecture } from '../../core/identification.js';
+import { compresser, urlPhoto, oublierPhoto } from '../../core/photos.js';
 import { cles, enregistrerCles, reprendreClesV9, masquer } from '../../core/cles.js';
 import { inventaire } from '../../core/inventaire.js';
 import { tuile } from '../cave/tuile.js';
@@ -89,6 +89,34 @@ async function ecran(core, el) {
       enCours = null;
       core.aller('/produit/nouveau');
     };
+    // Mise à jour d'une fiche existante : on coche ce qu'on reporte (photo comprise).
+    const zoneMaj = h('div', { class: 'zone-maj' });
+    async function mettreAJour(cible, bouton) {
+      const brut = await core.store.get('produits', cible.id);
+      const diffs = differences(brut, trouve);
+      const aPhoto = !!(await urlPhoto(core.store, cible.id));
+      const cases = diffs.map((d) => h('label', { class: 'case-maj' }, h('input', { type: 'checkbox', name: d.cle, checked: d.coche }),
+        h('span', {}, h('strong', {}, d.libelle), ' : ', String(d.apres), d.avant !== null ? h('span', { class: 'discret' }, ` (actuel : ${d.avant})`) : null)));
+      const casePhoto = h('label', { class: 'case-maj' }, h('input', { type: 'checkbox', name: '__photo', checked: !aPhoto }),
+        h('span', {}, h('strong', {}, aPhoto ? 'Remplacer la photo' : 'Ajouter la photo'), verso ? h('span', { class: 'discret' }, ' (recto)') : null));
+      remplacer(zoneMaj, h('form', {
+        class: 'carte-maj', onsubmit: async (e) => {
+          e.preventDefault();
+          const choix = new FormData(e.target);
+          await core.store.put('produits', fusionnerLecture(brut, trouve, diffs.map((d) => d.cle).filter((k) => choix.has(k))));
+          if (choix.has('__photo')) { await core.store.enregistrerPhoto(cible.id, photo); oublierPhoto(cible.id); }
+          enCours = null;
+          core.aller(`/fiche/${cible.id}`);
+        }
+      },
+        h('h3', {}, `Mettre à jour « ${cible.nom} »`),
+        cases, casePhoto,
+        h('p', { class: 'discret' }, 'Le texte lu est conservé dans la fiche ; le verso rejoint les notes.'),
+        h('div', { class: 'boutons' }, h('button', { type: 'submit', class: 'bouton principal' }, 'Enregistrer'), h('button', { type: 'button', class: 'bouton', onclick: () => remplacer(zoneMaj) }, 'Annuler'))));
+      zoneMaj.scrollIntoView({ block: 'nearest' });
+      bouton.blur();
+    }
+
     remplacer(apercu,
       h('figure', { class: 'face-scan' }, h('img', { src: URL.createObjectURL(photo), alt: 'Recto de l’étiquette' }), h('figcaption', {}, 'Recto · lu')),
       verso ? h('figure', { class: 'face-scan' }, h('img', { src: URL.createObjectURL(verso), alt: 'Verso de l’étiquette' }), h('figcaption', {}, 'Verso · lu'))
@@ -104,8 +132,10 @@ async function ecran(core, el) {
         h('div', { class: 'boutons' }, h('button', { type: 'button', class: 'bouton principal', onclick: nouveau }, vin ? 'Créer la fiche de ce vin' : 'Créer la fiche'))),
       candidats.length ? h('section', { class: 'carte' },
         h('h2', {}, candidats.length > 1 ? 'Dans votre cave ?' : 'Déjà dans votre cave ?'),
-        h('div', { class: 'matrice' }, candidats.map((p) => tuile(core, p))),
-        h('p', { class: 'discret' }, 'Touchez la bonne bouteille pour ouvrir sa fiche (et la déguster ou la mesurer).'))
+        h('div', { class: 'matrice' }, candidats.map((p) => h('div', { class: 'candidat' }, tuile(core, p),
+          h('button', { type: 'button', class: 'bouton petit', onclick: (e) => mettreAJour(p, e.currentTarget) }, 'Mettre à jour')))),
+        zoneMaj,
+        h('p', { class: 'discret' }, 'Touchez la bouteille pour ouvrir sa fiche, ou « Mettre à jour » pour y reporter la photo et ce qui a été lu.'))
         : h('p', { class: 'carte discret' }, vin ? 'Aucun vin ressemblant dans votre cave.' : 'Aucun spiritueux ressemblant dans votre collection.'));
   }
 
