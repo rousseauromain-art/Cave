@@ -50,7 +50,8 @@ export const encoderRangee = (rangee, presents, poses = presents, retires = 0) =
 export const presentsDe = (t) => (t.donnees.length >= 3 ? t.donnees[2] : t.donnees[0]);
 
 // Types observés (v9) ; les autres sont à découvrir avec le labo.
-export const TYPES_CONNUS = { 0x00: 'état de rangée', 0x21: 'passerelle (journal)', 0x40: 'module', 0x45: 'capteurs de rangée' };
+// 15/11 : écrire 01 sur 2003 déclenche un échange passerelle ↔ rangée 1 (0x40, 0x41, 0x42, 0x43) puis un code 0x35 vers toutes les rangées.
+export const TYPES_CONNUS = { 0x00: 'code passerelle → rangée', 0x21: 'passerelle (journal)', 0x40: 'module', 0x41: 'module, réglage ?', 0x42: 'module, réglage ?', 0x43: 'module, réglage ?', 0x45: 'capteurs de rangée' };
 
 // Lecture détaillée des trames observées (journal du 15/11/2026) ; hypothèses marquées « ? ».
 // 0x21 passerelle : [identifiant 15 octets][FF][genre] puis, pour genre 01 : [horloge 4 octets LE, 1/8 s][n° d'événement 2 octets LE]
