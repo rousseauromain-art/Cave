@@ -4,7 +4,7 @@ import { STYLES, COULEURS_PERSO, categoriesPerso, clePerso } from '../../data/st
 import { DRAPEAUX } from '../../data/drapeaux.js';
 import { ajouterBouteilles, aGrille, emplacementsLibres } from '../../core/inventaire.js';
 import { compresser, urlPhoto, oublierPhoto } from '../../core/photos.js';
-import { prendreBrouillon } from '../../core/identification.js';
+import { prendreBrouillon, lireCepages, ecrireCepages } from '../../core/identification.js';
 import { FORMES, formeDe, silhouette } from '../../core/ui/etagere.js';
 
 function champ(h, libelle, controle, aide) {
@@ -76,7 +76,7 @@ export async function ecranFormulaire(core, el, { id }) {
     h('div', { class: 'deux' },
       champ(h, 'Origine', select('pays', Object.entries(DRAPEAUX).map(([k, d]) => [k, d.nom]), '—')),
       champ(h, 'Région', entree('region'))),
-    vin ? champ(h, 'Cépages', entree('cepages')) : null,
+    vin ? champ(h, 'Cépages', entree('cepages', { placeholder: 'ex. Grenache 60 %, Syrah 40 %' }), 'Part en % facultative ; chaque cépage devient un mot-clé de la cave') : null,
     vin ? champ(h, 'Appellation', entree('appellation'))
       : h('div', { class: 'deux' },
         champ(h, 'Degré (% vol.)', entree('degre', { type: 'number', inputmode: 'decimal', step: '0.1', min: '0', max: '80' })),
@@ -132,7 +132,7 @@ export async function ecranFormulaire(core, el, { id }) {
       nom: d.nom.trim(), producteur: d.producteur?.trim() || null, cuvee: d.cuvee?.trim() || null,
       millesime: nombre(d.millesime), age_ans: nombre(d.age_ans), style: style.cle, pays: d.pays || null,
       region: d.region?.trim() || null, appellation: d.appellation?.trim() || null, degre: nombre(d.degre),
-      cepages: vin ? d.cepages?.trim() || null : p.cepages ?? null,
+      cepages: vin ? ecrireCepages(lireCepages(d.cepages)) : p.cepages ?? null,
       fut: d.fut?.trim() || null, apogee_debut: nombre(d.apogee_debut), apogee_fin: nombre(d.apogee_fin),
       note: d.note === '' ? null : Math.max(0, Math.min(5, Number(d.note))), commentaire: d.commentaire?.trim() || null,
       photo_path: nouvellePhoto ? null : p.photo_path ?? null,

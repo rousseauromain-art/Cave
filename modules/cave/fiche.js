@@ -1,6 +1,7 @@
 // Fiche d'un produit : photo avec drapeau/note/compteur, sections dépliables au style de la carte MyOeno.
 import { produitEnrichi, nomComplet } from '../../core/inventaire.js';
 import { historique } from '../../core/degustations.js';
+import { lireCepages } from '../../core/identification.js';
 import { ligneDegustation } from '../../core/ui/degustation.js';
 import { drapeau, pastille, note } from '../../core/ui/badges.js';
 import { urlPhoto } from '../../core/photos.js';
@@ -152,7 +153,8 @@ export async function ecranFiche(core, el, { id }) {
         h('span', { class: 'surtitre' }, [style?.titre, p.region, p.appellation].filter(Boolean).join(' · ')),
         h('h2', {}, nomComplet(p)),
         p.producteur || p.cuvee ? h('span', { class: 'sous-titre' }, [p.producteur, p.cuvee].filter(Boolean).join(' · ')) : null,
-        p.cepages ? h('div', { class: 'puces-mots lecture cepages-fiche', 'aria-label': 'Cépages' }, p.cepages.split(/\s*[,·\/]\s*/).filter(Boolean).map((c) => h('span', { class: 'puce-mot' }, c))) : null),
+        p.cepages ? h('div', { class: 'puces-mots lecture cepages-fiche', 'aria-label': 'Cépages' }, lireCepages(p.cepages).map((c) =>
+          h('a', { class: 'puce-mot', href: `#/cave?cepage=${encodeURIComponent(c.nom)}`, 'aria-label': `${c.nom}${c.part !== null ? ` ${c.part} %` : ''} : voir les vins de ce cépage` }, c.nom, c.part !== null ? h('span', { class: 'part' }, ` ${c.part} %`) : null))) : null),
       sections)
   );
 }
