@@ -172,6 +172,16 @@ export async function ecranLabo(core, el) {
   const TESTS = [
     { titre: 'Chaque voie d’écriture', aide: 'Rejoue la dernière trame reçue puis une demande d’état, sur CHAQUE caractéristique d’écriture (2001 puis 2003…). Si le casier relaie, la trame réapparaît dans le flux.', partout: true, pause: 1500,
       etapes: () => [...(session.derniereRecue ? [[session.derniereRecue.adresse, session.derniereRecue.type, session.derniereRecue.donnees]] : []), [r(), 0x00, []], [r(), 0x00, [0x3b]]] },
+    { titre: '2003 : commandes courtes', aide: '2003 accepte 1 ou 2 octets. Essaie [rangée, emplacement] sous plusieurs formes (masque, numéro, ordre inversé, rangée comptée depuis 0), 3 s entre chaque. Regardez la clayette choisie.', reaction: true, continuer: true, pause: 3000,
+      etapes: () => {
+        const c = session.caracs.find((x) => /2003/.test(court(x.uuid)));
+        if (!c) return [];
+        const e = Math.max(1, Math.min(8, Number(placeTest.value) || 1));
+        const formes = [[[r(), bit()], 'rangée, masque'], [[bit(), r()], 'masque, rangée'], [[r(), e], 'rangée, n° emplacement'], [[e, r()], 'n° emplacement, rangée'],
+          [[r() - 1, bit()], 'rangée depuis 0, masque'], [[r() - 1, e - 1], 'rangée et emplacement depuis 0'], [[r(), 0xff], 'rangée, toute la rangée'],
+          [[r()], 'rangée seule'], [[bit()], 'masque seul'], [[0x01], '01'], [[0x02], '02'], [[0xff], 'ff'], [[0x01, 0x00], '01 00'], [[0x00, 0x01], '00 01']];
+        return formes.map(([octets, nom]) => ({ octets, uuid: c.uuid, texte: `2003 · ${hexa(octets)} (${nom})` }));
+      } },
     { titre: 'Longueur acceptée par 2003', aide: '2003 refuse nos trames (« invalid attribute length ») : elle attend une taille fixe. Envoie 1 à 20 octets à zéro et note les tailles acceptées (sans « ERREUR »).', continuer: true, pause: 600,
       etapes: () => { const c = session.caracs.find((x) => /2003/.test(court(x.uuid))); return c ? Array.from({ length: 20 }, (_, i) => ({ octets: new Array(i + 1).fill(0), uuid: c.uuid, texte: `2003 · ${i + 1} octet${i ? 's' : ''} à zéro` })) : []; } },
     { titre: 'État des rangées', aide: 'Type 0x00 vers les rangées 1 à 8, comme le ferait la passerelle. Sans risque : simple demande.', etapes: () => [1, 2, 3, 4, 5, 6, 7, 8].map((a) => [a, 0x00, []]) },

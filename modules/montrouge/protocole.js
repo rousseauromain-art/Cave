@@ -53,7 +53,8 @@ export const presentsDe = (t) => (t.donnees.length >= 3 ? t.donnees[2] : t.donne
 export const TYPES_CONNUS = { 0x00: 'état de rangée', 0x21: 'passerelle (journal)', 0x40: 'module', 0x45: 'capteurs de rangée' };
 
 // Lecture détaillée des trames observées (journal du 15/11/2026) ; hypothèses marquées « ? ».
-// 0x21 passerelle : [identifiant 15 octets][FF][genre] puis, pour genre 01 : [horloge 4 octets LE, 1/8 s][n° d'ordre][0a][rangée][présent][retirés][posés].
+// 0x21 passerelle : [identifiant 15 octets][FF][genre] puis, pour genre 01 : [horloge 4 octets LE, 1/8 s][n° d'événement 2 octets LE]
+//   [rangée][posés][retirés][présents selon la passerelle] (n° passé de 0x0aff à 0x0b00 le 15/11).
 // 0x40 module de rangée : [02][identifiant 4 octets][nom ASCII 8][version ? 3 octets][FF][03 00 06].
 // 0x00 vers une rangée : octet 3b envoyé deux fois après chaque mouvement (acquittement ?).
 export function detailTrame({ adresse, type, donnees: d }) {
@@ -68,7 +69,7 @@ export function detailTrame({ adresse, type, donnees: d }) {
       const tic = d[17] | (d[18] << 8) | (d[19] << 16) | (d[20] * 2 ** 24);
       const quand = new Date(Date.UTC(2019, 0, 1) + (tic / 8) * 1000);
       const places = (m) => [0, 1, 2, 3, 4, 5, 6, 7].filter((i) => m & (1 << i)).map((i) => `E${i + 1}`).join('+') || '—';
-      return `passerelle ${id} : événement n° ${d[21]}, rangée ${d[23]} : posé ${places(d[24])}, retiré ${places(d[25])}, présents selon la passerelle ${places(d[26])} · horloge ${quand.toISOString().slice(0, 19).replace('T', ' ')} ?`;
+      return `passerelle ${id} : événement n° ${d[21] | (d[22] << 8)}, rangée ${d[23]} : posé ${places(d[24])}, retiré ${places(d[25])}, présents selon la passerelle ${places(d[26])} · horloge ${quand.toISOString().slice(0, 19).replace('T', ' ')} ?`;
     }
     return `passerelle ${id} : ${d[16] === 0x00 ? 'début' : d[16] === 0xff ? 'fin' : `genre ${d[16]}`}`;
   }
