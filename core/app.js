@@ -143,6 +143,11 @@ function rendreReglages(el) {
   );
 }
 
+// Page partagée depuis Android (« Partager » → Cave) : l'adresse arrive en ?lien= ou dans le texte.
+const partage = new URLSearchParams(location.search);
+const lienPartage = partage.get('lien') || (partage.get('texte') || '').match(/https:\/\/\S+/)?.[0];
+if (lienPartage) history.replaceState(null, '', `${location.pathname}#/scanner?lien=${encodeURIComponent(lienPartage)}`);
+
 for (const m of MODULES) m.init?.(core);
 appliquer();
 // Retour d'un lien de connexion : laisser Supabase lire le jeton avant que le routeur ne réécrive l'URL.

@@ -177,4 +177,43 @@ test.describe('écran Scanner', () => {
     expect(p).toMatchObject({ nom: 'Rabassière', appellation: 'Grignan-les-Adhémar', millesime: 2024 });
     expect(p.extra.texte_lu.recto).toContain('RABASSIÈRE');
   });
+
+  test('S13-01 page web (texte de La Suzienne) → cépages, millésime de la fiche, notes, service ; mise à jour de la fiche', async ({ page }) => {
+    const texte = ['AOP Grignan les Adhémar Rabassière Rouge 2023', 'Millésime : 2024', 'Contenance : 75 cl', 'Cépages', '60% Grenache, 40% Syrah', 'Sol / Terroir', 'Argilo-calcaire',
+      'Vinification', 'Cuvaison 15 à 18 jours. Élevage 10 à 12 mois en fûts de chêne.', 'Dégustation', 'Robe profonde aux reflets grenats, griottes et mûres.',
+      'Température de service', '14° à 15°', 'Accords Mets & Vins', 'Spécialités à la truffe du Tricastin, viandes grillées.'].join('\n');
+    await page.route('https://www.exemple-caviste.fr/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', headers: { 'Access-Control-Allow-Origin': '*' },
+      body: `<html><head><meta property="og:title" content="AOP Grignan les Adhémar Rabassière Rouge 2023"></head><body><nav>Menu Panier</nav>${texte.split('\n').map((l) => `<p>${l}</p>`).join('')}</body></html>` }));
+    await page.goto('./#/cave');
+    const pid = await page.evaluate(async () => (await (await import('/core/store.js')).creerStore('cave').put('produits', { profil: 'vin', nom: 'Rabassiere', millesime: 2024, style: 'rouge', pays: 'FR', extra: { lien: 'https://www.exemple-caviste.fr/rabassiere.html' } })).id);
+    await page.goto(`./#/fiche/${pid}`);
+    await page.locator('[data-section="notes"]').evaluate((d) => { d.open = true; });
+    await page.getByRole('link', { name: 'Compléter depuis la page' }).click();
+    const maj = page.locator('.carte-maj');
+    await expect(maj).toContainText('Mettre à jour « Rabassiere »');
+    await expect(page.locator('.champs-lus')).toContainText('Rabassière');
+    await expect(page.locator('.champs-lus')).toContainText('14–15 °C');
+    await expect(maj.getByRole('checkbox', { name: /Millésime/ })).toHaveCount(0); // 2024 lu = 2024 en fiche (le titre disait 2023)
+    await expect(maj.getByRole('checkbox', { name: /Cépages : Grenache, Syrah/ })).toBeChecked();
+    await maj.getByRole('checkbox', { name: /Nom/ }).check();
+    await maj.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page).toHaveURL(new RegExp(`#/fiche/${pid}`));
+    const p = await page.evaluate(async (x) => (await (await import('/core/store.js')).creerStore('cave').get('produits', x)), pid);
+    expect(p).toMatchObject({ nom: 'Rabassière', cepages: 'Grenache, Syrah', appellation: 'Grignan-les-Adhémar', millesime: 2024 });
+    expect(p.commentaire).toContain('Accords : Spécialités à la truffe');
+    expect(p.extra.temperature).toEqual([14, 15]);
+    expect(p.extra.page_web.texte).toContain('Argilo-calcaire');
+  });
+
+  test('S13-02 site illisible : texte collé ; lien partagé depuis Android ouvre le scanner', async ({ page }) => {
+    await page.route('https://www.refus.fr/**', (route) => route.abort());
+    await page.route('https://r.jina.ai/**', (route) => route.fulfill({ status: 451, body: '' }));
+    await page.goto('./?texte=' + encodeURIComponent('Regardez https://www.refus.fr/vin.html'));
+    await expect(page).toHaveURL(/#\/scanner\?lien=/);
+    await expect(page.getByRole('status').filter({ hasText: 'Lecture impossible' })).toBeVisible();
+    await page.getByLabel('Texte de la page').fill('Domaine Test Cuvée Bleue 2020\nCépage : Merlot\nTempérature de service : 16 à 18 °C');
+    await page.getByRole('button', { name: 'Analyser le texte' }).click();
+    await expect(page.locator('.cepages-lus .puce-mot')).toHaveText(['Merlot']);
+    await expect(page.locator('.champs-lus')).toContainText('2020');
+  });
 });

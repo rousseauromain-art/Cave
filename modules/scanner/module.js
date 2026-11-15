@@ -1,7 +1,8 @@
 // Scanner : photo d'étiquette → identification → vin de la cave reconnu, ou nouvelle fiche préremplie.
 import { remplacer } from '../../core/ui/dom.js';
 import { ICONES } from '../../core/ui/icones.js';
-import { identifier, rapprocher, deposerBrouillon, lireTexte, completerAvecVerso, differences, fusionnerLecture } from '../../core/identification.js';
+import { identifier, rapprocher, deposerBrouillon, lireTexte, completerAvecVerso, differences, fusionnerLecture, extraLecture, appellations } from '../../core/identification.js';
+import { lirePage, analyserPage, imagePage } from '../../core/web.js';
 import { compresser, urlPhoto, oublierPhoto } from '../../core/photos.js';
 import { cles, enregistrerCles, reprendreClesV9, masquer } from '../../core/cles.js';
 import { inventaire } from '../../core/inventaire.js';
@@ -67,24 +68,57 @@ async function ecran(core, el) {
     }
   });
 
+  // Lien vers une page (caviste, domaine) : même résultat qu'une photo d'étiquette.
+  async function lireLien(url, texteColle = null) {
+    remplacer(apercu);
+    remplacer(resultat);
+    try {
+      statut.textContent = texteColle ? 'Analyse du texte collé…' : 'Lecture de la page…';
+      const page = texteColle ? { titre: texteColle.split('\n')[0], texte: texteColle } : await lirePage(url, { journal });
+      const trouve = analyserPage(page, url || null, await appellations());
+      const photo = await imagePage(page.image);
+      statut.textContent = texteColle ? 'Texte analysé.' : 'Page lue.';
+      etat = { trouve, photo, verso: null, bascule: null, cible };
+      if (trouve.profil !== core.profilCourant()) { enCours = { ...etat, bascule: core.profilCourant(), cible }; core.basculerProfil(); return; }
+      await afficher();
+    } catch (err) {
+      statut.textContent = `Lecture impossible : ${err.message}. Copiez le texte de la page et collez-le ci-dessous.`;
+      colle.open = true;
+    }
+  }
+  const cible = core.requete().produit || null;
+  const champLien = h('input', { type: 'url', inputmode: 'url', placeholder: 'https://… (fiche du vin chez un caviste, un domaine)', 'aria-label': 'Adresse de la page', value: core.requete().lien || '' });
+  const zoneColle = h('textarea', { rows: '4', 'aria-label': 'Texte de la page', placeholder: 'Sur la page : menu ⋮ → Tout sélectionner → Copier, puis collez ici.' });
+  const colle = h('details', { class: 'colle-page' }, h('summary', {}, 'Le site refuse ? Coller le texte de la page'), zoneColle,
+    h('button', { type: 'button', class: 'bouton', onclick: () => zoneColle.value.trim() && lireLien(champLien.value.trim(), zoneColle.value) }, 'Analyser le texte'));
+  const blocLien = h('section', { class: 'carte lien-scan' },
+    h('h2', {}, 'Depuis un lien'),
+    h('div', { class: 'ligne-lien' }, champLien, h('button', { type: 'button', class: 'bouton principal', onclick: () => champLien.value.trim() && lireLien(champLien.value.trim()) }, 'Lire')),
+    h('p', { class: 'discret' }, 'La page est lue directement, ou par le service de lecture r.jina.ai (seule l’adresse lui est transmise).'),
+    colle);
+
   async function afficher() {
     const { trouve, photo, verso, bascule } = etat;
     const vin = trouve.profil === 'vin';
-    const candidats = rapprocher(trouve, await inventaire(core.store, trouve.profil));
+    const tous = await inventaire(core.store, trouve.profil);
+    const choisi = etat.cible ? tous.find((x) => x.id === etat.cible) : null;
+    const candidats = choisi ? [choisi, ...rapprocher(trouve, tous).filter((x) => x.id !== choisi.id)] : rapprocher(trouve, tous);
     const champs = [
       ['Nom', trouve.nom], [vin ? 'Domaine' : 'Distillerie', trouve.producteur], ['Appellation', trouve.appellation],
       ['Région', trouve.region], ['Millésime', trouve.millesime], ['Âge', trouve.age_ans && `${trouve.age_ans} ans`],
       ['Couleur', vin && trouve.style && [STYLE_TITRE[trouve.style] || trouve.style, trouve.styleDeduit ? h('span', { class: 'discret' }, ' (déduit des cépages)') : null]],
-      ['Degré', trouve.degre && `${trouve.degre} %`], ['Contenance', trouve.volume_cl && `${trouve.volume_cl} cl`]
+      ['Degré', trouve.degre && `${trouve.degre} %`], ['Contenance', trouve.volume_cl && `${trouve.volume_cl} cl`],
+      ['Apogée', trouve.apogee_fin && `${trouve.apogee_debut ? `${trouve.apogee_debut}–` : 'jusqu’en '}${trouve.apogee_fin}`],
+      ['Service', trouve.temperature && `${trouve.temperature[0]}–${trouve.temperature[1]} °C`]
     ].filter(([, v]) => v);
     const cepages = trouve.cepages ? trouve.cepages.split(', ') : [];
-    const texte = [trouve.texte, trouve.texte_verso && `— Verso —\n${trouve.texte_verso}`].filter(Boolean).join('\n\n');
+    const texte = [trouve.notes, trouve.texte, trouve.texte_verso && `— Verso —\n${trouve.texte_verso}`].filter(Boolean).join('\n\n');
     const nouveau = () => {
-      const { source, texte: recto, texte_verso: versoTexte, styleDeduit, volume_cl, commentaire, ...lus } = trouve;
+      const { source, texte: recto, texte_verso: versoTexte, styleDeduit, volume_cl, commentaire, notes, lien, image, temperature, ...lus } = trouve;
       deposerBrouillon({
         ...lus, photo, source,
-        commentaire: [commentaire, versoTexte].filter(Boolean).join('\n\n') || null,
-        extra: { ...(volume_cl ? { volume_cl } : {}), ...(recto || versoTexte ? { texte_lu: { recto: recto || null, verso: versoTexte || null } } : {}) }
+        commentaire: [commentaire, notes, versoTexte].filter(Boolean).join('\n\n') || null,
+        extra: extraLecture(trouve)
       });
       enCours = null;
       core.aller('/produit/nouveau');
@@ -97,7 +131,7 @@ async function ecran(core, el) {
       const aPhoto = !!(await urlPhoto(core.store, cible.id));
       const cases = diffs.map((d) => h('label', { class: 'case-maj' }, h('input', { type: 'checkbox', name: d.cle, checked: d.coche }),
         h('span', {}, h('strong', {}, d.libelle), ' : ', String(d.apres), d.avant !== null ? h('span', { class: 'discret' }, ` (actuel : ${d.avant})`) : null)));
-      const casePhoto = h('label', { class: 'case-maj' }, h('input', { type: 'checkbox', name: '__photo', checked: !aPhoto }),
+      const casePhoto = !photo ? null : h('label', { class: 'case-maj' }, h('input', { type: 'checkbox', name: '__photo', checked: !aPhoto }),
         h('span', {}, h('strong', {}, aPhoto ? 'Remplacer la photo' : 'Ajouter la photo'), verso ? h('span', { class: 'discret' }, ' (recto)') : null));
       remplacer(zoneMaj, h('form', {
         class: 'carte-maj', onsubmit: async (e) => {
@@ -111,14 +145,16 @@ async function ecran(core, el) {
       },
         h('h3', {}, `Mettre à jour « ${cible.nom} »`),
         cases, casePhoto,
-        h('p', { class: 'discret' }, 'Le texte lu est conservé dans la fiche ; le verso rejoint les notes.'),
+        h('p', { class: 'discret' }, web ? 'Le lien et le texte de la page sont conservés ; dégustation et accords rejoignent les notes.' : 'Le texte lu est conservé dans la fiche ; le verso rejoint les notes.'),
         h('div', { class: 'boutons' }, h('button', { type: 'submit', class: 'bouton principal' }, 'Enregistrer'), h('button', { type: 'button', class: 'bouton', onclick: () => remplacer(zoneMaj) }, 'Annuler'))));
       zoneMaj.scrollIntoView({ block: 'nearest' });
       bouton.blur();
     }
 
+    const web = trouve.source === 'Page web';
     remplacer(apercu,
-      h('figure', { class: 'face-scan' }, h('img', { src: URL.createObjectURL(photo), alt: 'Recto de l’étiquette' }), h('figcaption', {}, 'Recto · lu')),
+      photo ? h('figure', { class: 'face-scan' }, h('img', { src: URL.createObjectURL(photo), alt: web ? 'Photo de la page' : 'Recto de l’étiquette' }), h('figcaption', {}, web ? 'Photo de la page' : 'Recto · lu'))
+        : h('figure', { class: 'face-scan' }, h('span', { class: 'vignette-vide' }), h('figcaption', {}, web ? 'Page sans photo récupérable' : '')),
       verso ? h('figure', { class: 'face-scan' }, h('img', { src: URL.createObjectURL(verso), alt: 'Verso de l’étiquette' }), h('figcaption', {}, 'Verso · lu'))
         : h('figure', { class: 'face-scan' }, h('label', { for: 'photo-verso', class: 'ajout-verso' }, h('span', { 'aria-hidden': 'true' }, '+'), 'Ajouter le verso'),
           h('label', { for: 'photo-verso-galerie', class: 'lien-galerie' }, 'ou depuis la galerie'), h('figcaption', {}, 'Contre-étiquette : description, accords')));
@@ -128,7 +164,7 @@ async function ecran(core, el) {
         h('h2', {}, 'Lu sur l’étiquette'),
         champs.length ? h('dl', { class: 'champs-lus' }, champs.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, typeof v === 'object' ? v : String(v))])) : h('p', { class: 'discret' }, 'Rien de lisible : essayez plus près, sans reflet.'),
         cepages.length ? h('div', { class: 'cepages-lus' }, h('span', { class: 'discret' }, 'Cépages'), h('div', { class: 'puces-mots lecture' }, cepages.map((c) => h('span', { class: 'puce-mot' }, c)))) : null,
-        texte ? h('details', { class: 'texte-lu' }, h('summary', {}, 'Texte lu (conservé dans la fiche)'), h('pre', {}, texte)) : null,
+        texte ? h('details', { class: 'texte-lu' }, h('summary', {}, web ? 'Notes et texte de la page (conservés dans la fiche)' : 'Texte lu (conservé dans la fiche)'), h('pre', {}, texte)) : null,
         h('div', { class: 'boutons' }, h('button', { type: 'button', class: 'bouton principal', onclick: nouveau }, vin ? 'Créer la fiche de ce vin' : 'Créer la fiche'))),
       candidats.length ? h('section', { class: 'carte' },
         h('h2', {}, candidats.length > 1 ? 'Dans votre cave ?' : 'Déjà dans votre cave ?'),
@@ -137,6 +173,7 @@ async function ecran(core, el) {
         zoneMaj,
         h('p', { class: 'discret' }, 'Touchez la bouteille pour ouvrir sa fiche, ou « Mettre à jour » pour y reporter la photo et ce qui a été lu.'))
         : h('p', { class: 'carte discret' }, vin ? 'Aucun vin ressemblant dans votre cave.' : 'Aucun spiritueux ressemblant dans votre collection.'));
+    if (choisi) await mettreAJour(choisi, document.createElement('button'));
   }
 
   el.append(
@@ -149,9 +186,11 @@ async function ecran(core, el) {
         h('label', { for: 'photo-scan-galerie', class: 'bouton grand' }, core.icone(ICONES.photo || '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 8"/>', 22), 'Choisir une photo')),
       entree, entreeVerso,
       statut),
+    blocLien,
     resultat);
 
   // Reprise d'une lecture après changement de profil.
+  if (!enCours && core.requete().lien) { await lireLien(core.requete().lien); return; }
   if (enCours && enCours.trouve.profil === profil) {
     etat = enCours;
     enCours = null;

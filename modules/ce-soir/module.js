@@ -1,7 +1,7 @@
 // Ce soir : quoi ouvrir (déclin d'abord, puis apogée), et préparation du service (aération Aveine, température).
 import { ICONES } from '../../core/ui/icones.js';
 import { inventaire, produitEnrichi, nomComplet } from '../../core/inventaire.js';
-import { PHASES, SERVICE, MODELES, PREFERENCES, aerationPour, reglagesService, enregistrerReglagesService } from '../../core/apogee.js';
+import { PHASES, SERVICE, MODELES, PREFERENCES, aerationPour, temperaturePour, reglagesService, enregistrerReglagesService } from '../../core/apogee.js';
 import { tuile } from '../cave/tuile.js';
 
 const ORDRE_PHASE = { declin: 0, apogee: 1, jeunesse: 3 };
@@ -45,7 +45,7 @@ async function ecranServir(core, el, { id }) {
   core.titre('Servir');
   const r = reglagesService();
   const heures = aerationPour(p);
-  const temp = SERVICE[p.style];
+  const temp = temperaturePour(p);
   const heure = h('input', { type: 'time', value: '20:00', 'aria-label': 'Heure de service' });
   const debut = h('strong', { class: 'grand-chiffre' });
   const maj = () => {

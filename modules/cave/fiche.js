@@ -7,7 +7,7 @@ import { urlPhoto } from '../../core/photos.js';
 import { radar, moyenne } from '../../core/ui/radar.js';
 import { contenuStock } from './stock.js';
 import { dessinerCourbe } from '../../core/ui/courbe.js';
-import { PHASES, SERVICE, MODELES, aerationPour, reglagesService, prerequis, estimer, chargerTable } from '../../core/apogee.js';
+import { PHASES, SERVICE, MODELES, aerationPour, temperaturePour, reglagesService, prerequis, estimer, chargerTable } from '../../core/apogee.js';
 
 const ouverts = new Set(['stock', 'profil', 'apogee']);
 
@@ -127,7 +127,7 @@ export async function ecranFiche(core, el, { id }) {
         }, recalcul ? `Recalculer (${recalcul.debut}–${recalcul.fin})` : 'Recalculer') : null)) : null,
     p.profil === 'vin' ? (() => {
       const heures = p.style ? aerationPour(p) : null;
-      const temp = SERVICE[p.style];
+      const temp = temperaturePour(p);
       return section(core, 'aeration', 'Aération', !p.style ? 'à compléter' : heures ? `${heures} h` : 'aucune',
         p.style ? h('div', { class: 'aeration-ligne' },
           anneau(heures, MODELES[reglagesService().modele]?.hmax ?? 24),
@@ -138,7 +138,9 @@ export async function ecranFiche(core, el, { id }) {
     })() : null,
     section(core, 'notes', 'Notes', p.commentaire || p.extra?.lien ? '' : 'vide',
       h('p', { class: 'notes-texte' }, p.commentaire || 'Aucune note.'),
-      p.extra?.lien && /^https:\/\//.test(p.extra.lien) ? h('a', { href: p.extra.lien, target: '_blank', rel: 'noopener noreferrer' }, 'Fiche du producteur ↗') : null),
+      p.extra?.lien && /^https:\/\//.test(p.extra.lien) ? h('div', { class: 'boutons' },
+        h('a', { href: p.extra.lien, target: '_blank', rel: 'noopener noreferrer', class: 'bouton' }, 'Ouvrir la page ↗'),
+        h('a', { href: `#/scanner?lien=${encodeURIComponent(p.extra.lien)}&produit=${p.id}`, class: 'bouton' }, 'Compléter depuis la page')) : null),
     p.extra?.texte_lu?.recto || p.extra?.texte_lu?.verso ? section(core, 'texte-lu', 'Texte de l’étiquette', p.extra.texte_lu.verso ? 'recto et verso' : 'recto',
       h('pre', { class: 'texte-etiquette' }, [p.extra.texte_lu.recto, p.extra.texte_lu.verso && `— Verso —\n${p.extra.texte_lu.verso}`].filter(Boolean).join('\n\n'))) : null
   ];

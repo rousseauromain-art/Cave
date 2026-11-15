@@ -65,7 +65,7 @@ async function demanderClaude(b64, profil, k) {
 
 // --- Lecture de texte (OCR) puis analyse heuristique ---
 let indexAppellations = null;
-async function appellations() {
+export async function appellations() {
   if (indexAppellations) return indexAppellations;
   try {
     const table = await (await fetch('data/apogee.json')).json(); // relatif au site (index.html à la racine)
@@ -294,20 +294,32 @@ export function prendreBrouillon() { const b = brouillon; brouillon = null; retu
 
 // Mise à jour d'une fiche existante avec une lecture : champs qui diffèrent, cochés d'office quand la fiche est vide.
 const CHAMPS_MAJ = [['nom', 'Nom'], ['producteur', 'Domaine / producteur'], ['appellation', 'Appellation'], ['region', 'Région'], ['millesime', 'Millésime'],
-  ['age_ans', 'Âge'], ['style', 'Couleur / catégorie'], ['degre', 'Degré'], ['cepages', 'Cépages']];
+  ['age_ans', 'Âge'], ['style', 'Couleur / catégorie'], ['degre', 'Degré'], ['cepages', 'Cépages'], ['apogee_debut', 'Apogée de'], ['apogee_fin', 'Apogée jusqu’à']];
 export function differences(produit, trouve) {
   return CHAMPS_MAJ.filter(([k]) => trouve[k] !== null && trouve[k] !== undefined && trouve[k] !== '' && String(trouve[k]).trim() !== String(produit[k] ?? '').trim())
     .map(([cle, libelle]) => ({ cle, libelle, avant: produit[cle] ?? null, apres: trouve[cle], coche: produit[cle] === null || produit[cle] === undefined || produit[cle] === '' }));
 }
 
-// Produit mis à jour : champs choisis, texte lu conservé, verso ajouté aux notes, contenance si absente.
+// Produit mis à jour : champs choisis, texte lu conservé (étiquette ou page web), notes ajoutées, contenance si absente.
 export function fusionnerLecture(produit, trouve, cles) {
   const maj = { ...produit };
   for (const k of cles) maj[k] = trouve[k];
-  const extra = { ...(produit.extra || {}) };
-  if (trouve.texte || trouve.texte_verso) extra.texte_lu = { recto: trouve.texte || extra.texte_lu?.recto || null, verso: trouve.texte_verso || extra.texte_lu?.verso || null };
-  if (trouve.volume_cl && !extra.volume_cl) extra.volume_cl = trouve.volume_cl;
-  maj.extra = extra;
-  if (trouve.texte_verso && !(produit.commentaire || '').includes(trouve.texte_verso)) maj.commentaire = [produit.commentaire, trouve.texte_verso].filter(Boolean).join('\n\n');
+  maj.extra = { ...(produit.extra || {}), ...extraLecture(trouve, produit.extra || {}) };
+  const ajout = trouve.notes || trouve.texte_verso;
+  if (ajout && !(produit.commentaire || '').includes(ajout)) maj.commentaire = [produit.commentaire, ajout].filter(Boolean).join('\n\n');
   return maj;
+}
+
+// Ce qu'une lecture ajoute à extra : texte de l'étiquette ou de la page, lien, température de service, contenance.
+export function extraLecture(trouve, extra = {}) {
+  const e = {};
+  if (trouve.source === 'Page web') {
+    e.page_web = { url: trouve.lien, texte: trouve.texte || null, lu_le: new Date().toISOString().slice(0, 10) };
+    e.lien = trouve.lien;
+  } else if (trouve.texte || trouve.texte_verso) {
+    e.texte_lu = { recto: trouve.texte || extra.texte_lu?.recto || null, verso: trouve.texte_verso || extra.texte_lu?.verso || null };
+  }
+  if (trouve.temperature) e.temperature = trouve.temperature;
+  if (trouve.volume_cl && !extra.volume_cl) e.volume_cl = trouve.volume_cl;
+  return e;
 }
