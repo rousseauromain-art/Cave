@@ -1,7 +1,7 @@
 // Lecture d'une page web (fiche d'un caviste, d'un domaine) : texte de la page puis champs du produit.
 // Le navigateur ne peut pas lire la plupart des sites directement (CORS) : on essaie la page, puis le service de
 // lecture r.jina.ai (seule l'adresse publique lui est transmise). Sinon, le texte peut être collé à la main.
-import { analyserTexte, trouverCepages, profilProbable, casse } from './identification.js';
+import { analyserTexte, trouverCepages, ecrireCepages, profilProbable, casse } from './identification.js';
 
 const LECTEUR = 'https://r.jina.ai/';
 const normaliser = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9%]+/g, ' ').trim();
@@ -100,7 +100,7 @@ export function analyserPage({ titre, texte, image = null }, url, table = []) {
   const r = rubriques(texte);
   const lignes = [{ texte: titre || '', hauteur: 40 }, ...[r.appellation, r.couleur, r.degre, r.contenance, r.cepages].filter(Boolean).map((t) => ({ texte: t, hauteur: 12 }))];
   const a = analyserTexte(lignes, table);
-  const cepages = trouverCepages(r.cepages || '').map((c) => c.nom);
+  const cepages = trouverCepages(r.cepages || '');
   const millesime = annees(r.millesime)[0] ?? annees(titre)[0] ?? null;
   // Nom : le titre sans appellation, mentions d'étiquette, couleur, millésime ni nom du site.
   let nom = (titre || '').split(/\s[|–—-]\s/)[0];
@@ -119,7 +119,7 @@ export function analyserPage({ titre, texte, image = null }, url, table = []) {
     profil: profilProbable(texte, { appellation: a.appellation, cepages }) || 'vin',
     nom, producteur: null, appellation: a.appellation, millesime,
     style: a.style, degre: a.degre, volume_cl: a.volume_cl,
-    cepages: cepages.join(', ') || null,
+    cepages: ecrireCepages(cepages),
     apogee_debut: ans && millesime ? millesime + Number(ans[1]) : null,
     apogee_fin: jusqua ? Number(jusqua) : ans && millesime ? millesime + Number(ans[2]) : null,
     temperature: temp ? [Number(temp[1]), Number(temp[2])] : null,

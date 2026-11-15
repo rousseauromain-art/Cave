@@ -23,7 +23,7 @@ test.describe('analyse sans navigateur', () => {
   test('S2-02 réponse IA → fiche vin et fiche spiritueux', async () => {
     const { versProduit } = await import(fichier('core/identification.js'));
     expect(versProduit({ nom: 'Les Cades', domaine: 'Peyre Brune', pays: 'France', millesime: '2019', couleur: 'rosé', cepages: ['grenache', 'syrah'], garde_de: 2021, garde_a: '2024' }, 'vin', 'Gemini'))
-      .toMatchObject({ nom: 'Les Cades', producteur: 'Peyre Brune', pays: 'FR', millesime: 2019, style: 'rose', cepages: 'grenache, syrah', apogee_debut: 2021, apogee_fin: 2024 });
+      .toMatchObject({ nom: 'Les Cades', producteur: 'Peyre Brune', pays: 'FR', millesime: 2019, style: 'rose', cepages: 'Grenache, Syrah', apogee_debut: 2021, apogee_fin: 2024 });
     expect(versProduit({ nom: 'Armorik Classic', distillerie: 'Warenghem', pays: 'Bretagne', categorie: 'malt', age: '', degre: '46' }, 'spiritueux', 'Claude'))
       .toMatchObject({ nom: 'Armorik Classic', producteur: 'Warenghem', pays: 'BZH', style: 'malt', degre: 46, age_ans: null });
   });
@@ -47,6 +47,17 @@ test.describe('analyse sans navigateur', () => {
     expect(profilProbable('Single Malt Scotch Whisky 46 % vol')).toBe('spiritueux');
     expect(profilProbable('Bonjour')).toBeNull();
     expect(trouverCepages('Grenache blanc et grenache noir, Syrah').map((c) => c.nom)).toEqual(['Grenache Blanc', 'Grenache', 'Syrah']);
+  });
+
+  test('S14-01 cépages : pourcentages lus avant ou après le nom, saisie libre relue', async () => {
+    const { trouverCepages, lireCepages, ecrireCepages, differences } = await import(fichier('core/identification.js'));
+    expect(ecrireCepages(trouverCepages('60% Grenache, 40% Syrah'))).toBe('Grenache 60 %, Syrah 40 %');
+    expect(ecrireCepages(trouverCepages('Syrah 70 % et Mourvèdre 30%'))).toBe('Syrah 70 %, Mourvèdre 30 %');
+    expect(ecrireCepages(trouverCepages('SYRAH · GRENACHE'))).toBe('Syrah, Grenache');
+    expect(lireCepages('grenache 60%; syrah 40 % / Petit truc')).toEqual([{ nom: 'Grenache', part: 60 }, { nom: 'Syrah', part: 40 }, { nom: 'Petit truc', part: null }]);
+    // Fiche « Grenache, Syrah » + lecture avec pourcentages : cochée d'office
+    const [d] = differences({ cepages: 'Grenache, Syrah' }, { cepages: 'Grenache 60 %, Syrah 40 %' });
+    expect(d).toMatchObject({ cle: 'cepages', coche: true });
   });
 
   test('S9-04 rapprochement : les mots courants (famille, réserve…) ne suffisent pas', async () => {
@@ -194,12 +205,12 @@ test.describe('écran Scanner', () => {
     await expect(page.locator('.champs-lus')).toContainText('Rabassière');
     await expect(page.locator('.champs-lus')).toContainText('14–15 °C');
     await expect(maj.getByRole('checkbox', { name: /Millésime/ })).toHaveCount(0); // 2024 lu = 2024 en fiche (le titre disait 2023)
-    await expect(maj.getByRole('checkbox', { name: /Cépages : Grenache, Syrah/ })).toBeChecked();
+    await expect(maj.getByRole('checkbox', { name: /Cépages : Grenache 60 %, Syrah 40 %/ })).toBeChecked();
     await maj.getByRole('checkbox', { name: /Nom/ }).check();
     await maj.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page).toHaveURL(new RegExp(`#/fiche/${pid}`));
     const p = await page.evaluate(async (x) => (await (await import('/core/store.js')).creerStore('cave').get('produits', x)), pid);
-    expect(p).toMatchObject({ nom: 'Rabassière', cepages: 'Grenache, Syrah', appellation: 'Grignan-les-Adhémar', millesime: 2024 });
+    expect(p).toMatchObject({ nom: 'Rabassière', cepages: 'Grenache 60 %, Syrah 40 %', appellation: 'Grignan-les-Adhémar', millesime: 2024 });
     expect(p.commentaire).toContain('Accords : Spécialités à la truffe');
     expect(p.extra.temperature).toEqual([14, 15]);
     expect(p.extra.page_web.texte).toContain('Argilo-calcaire');

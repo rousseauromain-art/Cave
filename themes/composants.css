@@ -335,3 +335,9 @@ a.bouton { text-decoration: none; }
 .colle-page summary { min-height: 40px; display: flex; align-items: center; color: var(--c-accent); font-weight: 600; cursor: pointer; }
 .colle-page textarea { width: 100%; margin: 4px 0 8px; }
 .face-scan .vignette-vide { width: 100%; height: 120px; border-radius: 14px; }
+/* Cépages : mots-clés de la cave et puces de la fiche */
+.cepages-cave { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; margin: 6px 0 0; padding-bottom: 2px; }
+.cepages-cave .discret { font-size: 12.5px; flex: none; }
+.cepages-cave .puce-mot { flex: none; }
+a.puce-mot { text-decoration: none; color: inherit; }
+.puce-mot .part { font-weight: 400; color: var(--c-texte-2); }

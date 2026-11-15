@@ -28,7 +28,7 @@ export function versProduit(r, profil, source) {
   return {
     profil, nom: r.nom || '', producteur: r.domaine || null, appellation: r.appellation || null, region: r.region || null,
     pays: codePays(r.pays), millesime: nombre(r.millesime), style: COULEURS[normaliser(r.couleur)] || null,
-    cepages: Array.isArray(r.cepages) ? r.cepages.join(', ') : r.cepages || null,
+    cepages: ecrireCepages(lireCepages(Array.isArray(r.cepages) ? r.cepages.join(', ') : r.cepages)),
     apogee_debut: nombre(r.garde_de), apogee_fin: nombre(r.garde_a),
     commentaire: [r.description, r.accords && `Accords : ${r.accords}`].filter(Boolean).join('\n') || null, texte: texteIA(r), source
   };
@@ -88,19 +88,35 @@ const CEPAGES = {
 const INDEX_CEPAGES = Object.entries(CEPAGES).flatMap(([couleur, l]) => l.map((nom) => ({ nom, couleur, cle: normaliser(nom) })))
   .sort((a, b) => b.cle.length - a.cle.length); // le plus long d'abord (« grenache blanc » avant « grenache »)
 
-// Cépages cités dans un texte, dans l'ordre d'apparition, sans doublon.
+// Cépages cités dans un texte, dans l'ordre d'apparition, sans doublon, avec leur part si elle est écrite
+// juste avant ou juste après (« 60% Grenache », « Syrah 40 % »).
 export function trouverCepages(texte) {
-  let reste = ` ${normaliser(texte)} `;
+  const n = ` ${normaliser(String(texte || '').replace(/%/g, ' pct '))} `;
+  let reste = n;
   const vus = [];
   for (const c of INDEX_CEPAGES) {
     const i = reste.indexOf(` ${c.cle} `);
     if (i < 0) continue;
-    vus.push({ ...c, i });
+    const fin = i + c.cle.length + 1;
+    const part = n.slice(0, i + 1).match(/(\d{1,3}) pct $/)?.[1] ?? n.slice(fin).match(/^ (\d{1,3}) pct /)?.[1];
+    vus.push({ ...c, i, part: part !== undefined && Number(part) <= 100 ? Number(part) : null });
     reste = reste.slice(0, i) + ' '.repeat(c.cle.length + 2) + reste.slice(i + c.cle.length + 2);
   }
   const noms = new Set();
-  return vus.sort((a, b) => a.i - b.i).filter((c) => !noms.has(c.cle) && noms.add(c.cle)).map(({ nom, couleur }) => ({ nom, couleur }));
+  return vus.sort((a, b) => a.i - b.i).filter((c) => !noms.has(c.cle) && noms.add(c.cle)).map(({ nom, couleur, part }) => ({ nom, couleur, part }));
 }
+
+// Liste de cépages stockée en texte : « Grenache 60 %, Syrah 40 % ». Lecture tolérante (saisie libre, anciens formats).
+export function lireCepages(texte) {
+  if (!texte) return [];
+  return String(texte).split(/\s*(?:[,;\/·+]|\bet\b)\s*/i).map((morceau) => morceau.trim()).filter(Boolean).map((morceau) => {
+    const connu = trouverCepages(morceau)[0];
+    const part = morceau.match(/(\d{1,3})\s*%/)?.[1];
+    const nom = connu?.nom || casse(morceau.replace(/\d{1,3}\s*%/, '').trim()).replace(/^./, (x) => x.toUpperCase());
+    return nom ? { nom, part: part !== undefined ? Number(part) : connu?.part ?? null } : null;
+  }).filter(Boolean);
+}
+export const ecrireCepages = (liste) => liste.map((c) => (c.part !== null && c.part !== undefined ? `${c.nom} ${c.part} %` : c.nom)).join(', ') || null;
 
 // Vin ou spiritueux d'après le texte lu (null si rien de net).
 export function profilProbable(texte, { appellation = null, cepages = [] } = {}) {
@@ -159,7 +175,7 @@ export function analyserTexte(lignes, index = [], annee = new Date().getFullYear
   return {
     nom: casse(candidats[0]?.t || domaine || ''), producteur: casse(domaine) || null, appellation,
     millesime: annees[0] ?? null, style: style || (couleurs.length === 1 ? couleurs[0] : null), styleDeduit: !style && couleurs.length === 1,
-    degre: degre ? nombre(degre[1]) : null, cepages: cepages.map((c) => c.nom).join(', ') || null,
+    degre: degre ? nombre(degre[1]) : null, cepages: ecrireCepages(cepages),
     volume_cl: cl ? Number(cl[1]) : ml ? Number(ml[1]) / 10 : null,
     texte: propres.map((l) => l.t).join('\n')
   };
@@ -247,7 +263,7 @@ export async function identifier(photo, profil, { statut = () => {}, journal = (
   }
   const { lignes, source } = await lireTexte(photo, { statut, journal });
   const a = analyserTexte(lignes, await appellations());
-  const detecte = profilProbable(a.texte, { appellation: a.appellation, cepages: a.cepages ? a.cepages.split(', ') : [] });
+  const detecte = profilProbable(a.texte, { appellation: a.appellation, cepages: lireCepages(a.cepages) });
   return { profil: detecte || profil, ...a, source };
 }
 
@@ -257,8 +273,10 @@ export async function completerAvecVerso(trouve, lignes) {
   const sortie = { ...trouve, texte_verso: v.texte };
   for (const k of ['producteur', 'appellation', 'millesime', 'degre', 'volume_cl']) if (!sortie[k] && v[k]) sortie[k] = v[k];
   if (v.cepages) {
-    const tous = [...new Set([...(trouve.cepages ? trouve.cepages.split(', ') : []), ...v.cepages.split(', ')])];
-    sortie.cepages = tous.join(', ');
+    // Fusion par nom : la part lue au verso complète celle du recto.
+    const parNom = new Map(lireCepages(trouve.cepages).map((c) => [c.nom, c]));
+    for (const c of lireCepages(v.cepages)) parNom.set(c.nom, { nom: c.nom, part: c.part ?? parNom.get(c.nom)?.part ?? null });
+    sortie.cepages = ecrireCepages([...parNom.values()]);
   }
   if (!sortie.style && v.style) { sortie.style = v.style; sortie.styleDeduit = v.styleDeduit; }
   return sortie;
@@ -297,7 +315,14 @@ const CHAMPS_MAJ = [['nom', 'Nom'], ['producteur', 'Domaine / producteur'], ['ap
   ['age_ans', 'Âge'], ['style', 'Couleur / catégorie'], ['degre', 'Degré'], ['cepages', 'Cépages'], ['apogee_debut', 'Apogée de'], ['apogee_fin', 'Apogée jusqu’à']];
 export function differences(produit, trouve) {
   return CHAMPS_MAJ.filter(([k]) => trouve[k] !== null && trouve[k] !== undefined && trouve[k] !== '' && String(trouve[k]).trim() !== String(produit[k] ?? '').trim())
-    .map(([cle, libelle]) => ({ cle, libelle, avant: produit[cle] ?? null, apres: trouve[cle], coche: produit[cle] === null || produit[cle] === undefined || produit[cle] === '' }));
+    .map(([cle, libelle]) => ({ cle, libelle, avant: produit[cle] ?? null, apres: trouve[cle], coche: produit[cle] === null || produit[cle] === undefined || produit[cle] === '' || (cle === 'cepages' && completeParts(produit.cepages, trouve.cepages)) }));
+}
+
+// Mêmes cépages, mais la lecture apporte des pourcentages absents de la fiche : on coche d'office.
+function completeParts(avant, apres) {
+  const a = lireCepages(avant), b = lireCepages(apres);
+  const noms = (l) => l.map((c) => c.nom).sort().join('|');
+  return noms(a) === noms(b) && b.filter((c) => c.part !== null).length > a.filter((c) => c.part !== null).length;
 }
 
 // Produit mis à jour : champs choisis, texte lu conservé (étiquette ou page web), notes ajoutées, contenance si absente.

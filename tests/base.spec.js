@@ -261,3 +261,19 @@ test('S10-02 catégories : Brut de fût intégré, catégorie personnelle créé
   await page.getByRole('button', { name: 'Finition vin', exact: true }).click();
   await expect(page.locator('.matrice')).toContainText('Finition Test');
 });
+
+test('S14-02 cépages en mots-clés : puces sur la fiche, filtre de la cave, saisie normalisée', async ({ page }) => {
+  await page.goto(`./#/produit/${await id(page, 'vin')}/modifier`);
+  await page.getByLabel('Cépages').fill('grenache 60%, syrah 40%');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page).toHaveURL(/#\/fiche\//);
+  await expect(page.locator('.cepages-fiche .puce-mot')).toHaveText(['Grenache 60 %', 'Syrah 40 %']);
+  await page.locator('.cepages-fiche .puce-mot').first().click();
+  await expect(page).toHaveURL(/#\/cave\?cepage=Grenache/);
+  await expect(page.locator('.cepages-cave .puce-mot[aria-pressed="true"]')).toHaveText('Grenache · 1');
+  await expect(page.locator('.matrice [role="listitem"]')).toHaveCount(1);
+  await page.locator('.cepages-cave .puce-mot[aria-pressed="true"]').click();
+  await expect(page.locator('.cepages-cave .puce-mot[aria-pressed="true"]')).toHaveCount(0);
+  await page.getByPlaceholder(/cépage/).fill('syrah');
+  await expect(page.locator('.matrice [role="listitem"]')).toHaveCount(1);
+});
