@@ -7,9 +7,22 @@ import { urlPhoto } from '../../core/photos.js';
 import { radar, moyenne } from '../../core/ui/radar.js';
 import { contenuStock } from './stock.js';
 import { dessinerCourbe } from '../../core/ui/courbe.js';
-import { PHASES, SERVICE, MODELES, aerationPour, reglagesService } from '../../core/apogee.js';
+import { PHASES, SERVICE, MODELES, aerationPour, reglagesService, prerequis, estimer, chargerTable } from '../../core/apogee.js';
 
 const ouverts = new Set(['stock', 'profil', 'apogee']);
+
+// Informations utilisées par un calcul (apogée, aération) : présentes, manquantes, et ce qui est supposé à défaut.
+function listePrerequis(core, p, quoi) {
+  const { h } = core;
+  const l = prerequis(p, quoi);
+  const manque = l.some((x) => !x.ok);
+  return h('div', { class: 'prerequis' },
+    h('p', { class: 'libelle' }, 'Calculée à partir de'),
+    h('ul', {}, l.map((x) => h('li', { class: x.ok ? 'ok' : x.requis ? 'manque requis' : 'manque' },
+      h('span', { 'aria-hidden': 'true', class: 'marque' }, x.ok ? '✓' : x.requis ? '!' : '–'),
+      h('span', {}, h('strong', {}, x.libelle), x.ok && x.valeur ? ` : ${x.valeur}` : x.requis ? ' : obligatoire' : x.aide ? ` : ${x.aide}` : '')))),
+    manque ? h('a', { href: `#/produit/${p.id}/modifier`, class: 'lien-completer' }, 'Compléter la fiche') : null);
+}
 
 // Anneau d'aération (échelle de l'appareil choisi).
 function anneau(heures, hmax = 24) {
@@ -59,6 +72,8 @@ export async function ecranFiche(core, el, { id }) {
   const memeStyle = new Set(tousProduits.filter((x) => p.style && x.style === p.style && x.id !== p.id).map((x) => x.id));
   const moyStyle = moyenne(mesures.filter((m) => memeStyle.has(m.produit_id)));
   const lignesDeg = await historique(core.store, { produitId: p.id });
+  // Ce que donnerait le calcul si on effaçait les années enregistrées.
+  const recalcul = p.profil === 'vin' && p.apogee_debut ? estimer({ ...p, apogee_debut: null }, await chargerTable()) : null;
   const motsFiche = [...new Set(degustations.filter((d) => d.produit_id === p.id).flatMap((d) => d.mots_cles || []))];
 
   // En-tête photo
@@ -86,28 +101,40 @@ export async function ecranFiche(core, el, { id }) {
       lignesDeg.length ? h('ul', { class: 'historique dans-fiche' }, lignesDeg.map((l) => ligneDegustation(core, l, { avecNom: false, lien: false, surSuppression: () => core.aller(`/fiche/${p.id}`) })))
         : p.profil === 'vin' ? null : h('p', { class: 'discret' }, 'Pas encore dégusté.'),
       h('a', { href: `#/mesure?produit=${p.id}`, class: 'bouton' }, p.profil === 'vin' ? 'Scanner avec MyOeno' : 'Déguster')),
-    p.profil === 'vin' ? section(core, 'apogee', 'Apogée', p.phase ? h('span', { class: `statut ${p.phase}` }, PHASES[p.phase]) : 'non renseignée',
+    p.profil === 'vin' ? section(core, 'apogee', 'Apogée', p.phase ? h('span', { class: `statut ${p.phase}` }, PHASES[p.phase]) : 'à compléter',
       p.apogee && p.millesime ? dessinerCourbe(p.millesime, p.apogee.debut, p.apogee.fin) : null,
       p.apogee
         ? h('p', { class: 'phrase' }, { jeunesse: `Encore jeune : idéal à partir de ${p.apogee.debut}.`, apogee: `À son apogée jusqu'en ${p.apogee.fin}.`, declin: `Plateau passé depuis ${p.apogee.fin} : à boire sans attendre.` }[p.phase])
-        : h('p', { class: 'discret' }, p.millesime ? 'Renseignez l\u2019appellation ou les années dans la fiche pour estimer l\u2019apogée.' : 'Renseignez le millésime pour estimer l\u2019apogée.'),
-      p.apogee?.source ? h('p', { class: 'discret' }, `${p.apogee.estimee ? 'Estimation — ' : 'Source : '}${p.apogee.source}`) : null,
-      p.apogee?.estimee ? h('button', {
-        type: 'button', class: 'bouton', onclick: async () => {
-          const brut = await core.store.get('produits', p.id);
-          await core.store.put('produits', { ...brut, apogee_debut: p.apogee.debut, apogee_fin: p.apogee.fin, extra: { ...(brut.extra || {}), apogee_source: p.apogee.source } });
-          core.aller(`/fiche/${p.id}`);
-        }
-      }, `Retenir ${p.apogee.debut}–${p.apogee.fin}`) : null) : null,
-    p.profil === 'vin' && p.style ? (() => {
-      const heures = aerationPour(p);
+        : null,
+      p.apogee?.source ? h('p', { class: 'discret' }, `${p.apogee.estimee ? 'Estimation — ' : 'Retenue — '}${p.apogee.source}`) : !p.apogee ? null : h('p', { class: 'discret' }, 'Années saisies dans la fiche.'),
+      listePrerequis(core, p, 'apogee'),
+      h('div', { class: 'boutons' },
+        p.apogee?.estimee ? h('button', {
+          type: 'button', class: 'bouton', onclick: async () => {
+            const brut = await core.store.get('produits', p.id);
+            await core.store.put('produits', { ...brut, apogee_debut: p.apogee.debut, apogee_fin: p.apogee.fin, extra: { ...(brut.extra || {}), apogee_source: p.apogee.source } });
+            core.aller(`/fiche/${p.id}`);
+          }
+        }, `Retenir ${p.apogee.debut}–${p.apogee.fin}`) : null,
+        // Années enregistrées (retenues, saisies ou lues par l'IA) : on peut repartir du calcul.
+        p.apogee && !p.apogee.estimee ? h('button', {
+          type: 'button', class: 'bouton', onclick: async () => {
+            const brut = await core.store.get('produits', p.id);
+            const { apogee_source, ...extra } = brut.extra || {};
+            await core.store.put('produits', { ...brut, apogee_debut: null, apogee_fin: null, extra });
+            core.aller(`/fiche/${p.id}`);
+          }
+        }, recalcul ? `Recalculer (${recalcul.debut}–${recalcul.fin})` : 'Recalculer') : null)) : null,
+    p.profil === 'vin' ? (() => {
+      const heures = p.style ? aerationPour(p) : null;
       const temp = SERVICE[p.style];
-      return section(core, 'aeration', 'Aération', heures ? `${heures} h` : 'aucune',
-        h('div', { class: 'aeration-ligne' },
+      return section(core, 'aeration', 'Aération', !p.style ? 'à compléter' : heures ? `${heures} h` : 'aucune',
+        p.style ? h('div', { class: 'aeration-ligne' },
           anneau(heures, MODELES[reglagesService().modele]?.hmax ?? 24),
-          h('div', {}, h('p', { class: 'phrase gauche' }, heures ? `${heures} h d\u2019aération conseillée${p.mesure ? '' : ' (sans mesure : tanins moyens supposés)'}.` : 'Pas d\u2019aération : se sert directement.'),
-            temp ? h('p', { class: 'discret' }, `Service à ${temp[0]}–${temp[1]} °C`) : null)),
-        h('a', { href: `#/servir/${p.id}`, class: 'bouton principal' }, 'Préparer le service'));
+          h('div', {}, h('p', { class: 'phrase gauche' }, heures ? `${heures} h d’aération conseillée.` : 'Pas d’aération : se sert directement.'),
+            temp ? h('p', { class: 'discret' }, `Service à ${temp[0]}–${temp[1]} °C`) : null)) : null,
+        listePrerequis(core, p, 'aeration'),
+        p.style ? h('a', { href: `#/servir/${p.id}`, class: 'bouton principal' }, 'Préparer le service') : null);
     })() : null,
     section(core, 'notes', 'Notes', p.commentaire || p.extra?.lien ? '' : 'vide',
       h('p', { class: 'notes-texte' }, p.commentaire || 'Aucune note.'),

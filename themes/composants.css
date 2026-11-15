@@ -312,3 +312,13 @@ a.bouton { text-decoration: none; }
 .couleur-perso { width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .couleur-perso input { appearance: none; width: 40px; height: 40px; border-radius: 20px; margin: 0; cursor: pointer; }
 .couleur-perso input:checked { box-shadow: inset 0 0 0 3px #FFFFFF; outline: 3px solid var(--c-accent); }
+/* Informations utilisées par l'apogée et l'aération */
+.prerequis { margin: 10px 0 4px; }
+.prerequis .libelle { margin: 0 0 4px; }
+.prerequis ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
+.prerequis li { display: flex; gap: 8px; align-items: baseline; color: var(--c-texte-2); }
+.prerequis .marque { width: 18px; height: 18px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: none; background: var(--c-bord); color: var(--c-texte-2); }
+.prerequis li.ok .marque { background: var(--c-apogee); color: #FFFFFF; }
+.prerequis li.requis .marque { background: var(--c-declin); color: #FFFFFF; }
+.prerequis li.requis { color: var(--c-declin); }
+.lien-completer { display: inline-flex; align-items: center; min-height: 40px; color: var(--c-accent); font-weight: 600; }

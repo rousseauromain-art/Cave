@@ -45,7 +45,7 @@ export async function inventaire(store, profil) {
       const debut = p.apogee_debut || est?.debut || null, fin = p.apogee_fin || est?.fin || null;
       return {
         ...p, bouteilles: bt, stock: bt.length, mesure: mesure.get(p.id) || null, styleInfo: styleDe(p),
-        apogee: debut ? { debut, fin, estimee: !!est, source: est?.source || p.extra?.apogee_source || null } : null,
+        apogee: debut ? { debut, fin, estimee: !!est, precision: est?.precision || 'saisie', source: est?.source || p.extra?.apogee_source || null } : null,
         phase: p.profil === 'vin' ? phase(debut, fin) : null
       };
     })

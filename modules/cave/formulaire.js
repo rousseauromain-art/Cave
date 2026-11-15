@@ -84,7 +84,7 @@ export async function ecranFormulaire(core, el, { id }) {
     vin ? null : champ(h, 'Fût', entree('fut')),
     choixForme,
     vin ? h('div', { class: 'deux' },
-      champ(h, 'Apogée de', entree('apogee_debut', { type: 'number', inputmode: 'numeric', min: '1900', max: '2200' })),
+      champ(h, 'Apogée de', entree('apogee_debut', { type: 'number', inputmode: 'numeric', min: '1900', max: '2200' }), 'Vide = calcul automatique'),
       champ(h, 'à', entree('apogee_fin', { type: 'number', inputmode: 'numeric', min: '1900', max: '2200' }))) : null,
     champ(h, 'Note (0 à 5)', entree('note', { type: 'number', inputmode: 'decimal', step: '0.5', min: '0', max: '5' })),
     champ(h, 'Notes', h('textarea', { name: 'commentaire', rows: '3' }, p.commentaire || '')),

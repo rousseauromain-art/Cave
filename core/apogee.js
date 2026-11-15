@@ -16,20 +16,64 @@ export async function chargerTable() {
   return table;
 }
 
-// Estimation depuis la table : appellation exacte, sinon région ; renvoie { debut, fin, source } en années civiles.
+// Mots d'étiquette sans valeur pour retrouver une appellation (« AOP Ventoux » → « ventoux »).
+const MOTS_LABEL = /\b(aop|aoc|igp|vdp|appellation|d origine|origine|controlee|protegee|vin de pays|vin de france)\b/g;
+const cleApp = (s) => normaliser(s).replace(MOTS_LABEL, ' ').replace(/\s+/g, ' ').trim();
+
+// Fenêtres génériques (années après le millésime) quand ni l'appellation ni la région ne sont connues.
+const GENERIQUE = { rouge: [3, 8], blanc: [1, 4], rose: [1, 2], jaune: [10, 40], liquoreux: [5, 25], champagne: [2, 6], champRose: [1, 4], prosecco: [0, 2], mute: [5, 30] };
+
+const fenetre = (t, k, couleur) => { const f = t[k]?.[couleur]; return Array.isArray(f) && f[0] !== null && f[1] !== null ? f : null; };
+const mediane = (l) => { const x = [...l].sort((a, b) => a - b); return x[Math.floor((x.length - 1) / 2)]; };
+
+// Estimation : appellation (exacte, puis incluse), sinon région, sinon fenêtre générique de la couleur.
+// Renvoie { debut, fin, source, precision: 'appellation' | 'region' | 'generique' } en années civiles, ou null sans millésime.
 export function estimer(produit, t) {
-  if (!produit.millesime || !t) return null;
+  if (!produit.millesime) return null;
+  t = t || {};
   const couleur = COULEUR_TABLE[produit.style] || 'Rouge';
-  const app = normaliser(produit.appellation), reg = normaliser(produit.region);
+  const app = cleApp(produit.appellation), reg = cleApp(produit.region);
+  const cles = Object.keys(t).filter((k) => fenetre(t, k, couleur));
+  const dernier = (k) => cleApp(k.split('>').at(-1));
+  const contient = (grand, petit) => petit.length >= 4 && ` ${grand} `.includes(` ${petit} `);
   let cle = null;
-  for (const k of Object.keys(t)) {
-    const fin = normaliser(k.split('>').at(-1));
-    if (app && fin === app && t[k][couleur]) { cle = k; break; }
+  if (app) {
+    cle = cles.find((k) => dernier(k) === app)
+      || cles.filter((k) => contient(app, dernier(k))).sort((a, b) => dernier(b).length - dernier(a).length)[0]
+      || cles.filter((k) => contient(dernier(k), app)).sort((a, b) => dernier(a).length - dernier(b).length)[0] || null;
   }
-  if (!cle && reg) cle = Object.keys(t).find((k) => normaliser(k.split('>').at(-1)) === reg && t[k][couleur]) || null;
-  if (!cle) return null;
-  const [a, b] = t[cle][couleur];
-  return { debut: produit.millesime + a, fin: produit.millesime + b, source: `Table d'apogée Caveasy : ${cle}` };
+  if (!cle && reg) cle = cles.find((k) => dernier(k) === reg) || null;
+  if (cle) {
+    const [a, b] = fenetre(t, cle, couleur);
+    return { debut: produit.millesime + a, fin: produit.millesime + b, source: `Table d'apogée Caveasy : ${cle}`, precision: 'appellation' };
+  }
+  // Région viticole (« Rhône », « Bourgogne ») : médiane des appellations de la région.
+  const deRegion = reg || app ? cles.filter((k) => [reg, app].includes(cleApp(k.split('>')[1] || ''))) : [];
+  if (deRegion.length) {
+    const f = deRegion.map((k) => fenetre(t, k, couleur));
+    const nom = deRegion[0].split('>').slice(0, 2).join('>').trim();
+    return { debut: produit.millesime + mediane(f.map((x) => x[0])), fin: produit.millesime + mediane(f.map((x) => x[1])), source: `Médiane des appellations ${nom} (${deRegion.length})`, precision: 'region' };
+  }
+  const g = GENERIQUE[produit.style] || GENERIQUE.rouge;
+  return { debut: produit.millesime + g[0], fin: produit.millesime + g[1], source: 'Fenêtre générique de la couleur (sans appellation reconnue)', precision: 'generique' };
+}
+
+// Informations utiles aux calculs, pour les afficher dans la fiche : [{ libelle, valeur, ok, requis }].
+export function prerequis(p, quoi) {
+  if (quoi === 'apogee') {
+    const precision = p.apogee?.precision;
+    return [
+      { libelle: 'Millésime', valeur: p.millesime, ok: !!p.millesime, requis: true },
+      { libelle: 'Couleur', valeur: p.styleInfo?.titre, ok: !!p.style, requis: false, aide: 'rouge supposé' },
+      { libelle: 'Appellation ou région', valeur: p.appellation || p.region, ok: !!(p.appellation || p.region) && precision !== 'generique', requis: false,
+        aide: p.appellation || p.region ? 'non reconnue dans la table' : 'estimation générique sinon' }
+    ];
+  }
+  return [
+    { libelle: 'Couleur', valeur: p.styleInfo?.titre, ok: !!p.style, requis: true },
+    { libelle: 'Apogée (phase)', valeur: p.phase ? PHASES[p.phase] : null, ok: !!p.phase, requis: false, aide: 'apogée supposée' },
+    { libelle: 'Tanins (mesure MyOeno)', valeur: p.mesure ? String(p.mesure.tanins) : null, ok: !!p.mesure, requis: false, aide: 'tanins moyens supposés' }
+  ];
 }
 
 // Phase à une date : jeunesse avant la fenêtre, apogée dedans, déclin après.
