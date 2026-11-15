@@ -72,5 +72,41 @@ test('S6-02 capteurs en direct : écarts, identification, retrait, rangement ass
   await expect(page.locator('[data-emplacement="R8-E4"]')).toHaveClass(/etat-ok/);
   await expect(page.locator('[data-emplacement="R8-E5"]')).toHaveClass(/etat-ok/);
   await expect(page.locator('.mouvements li')).toHaveCount(2);
-  await expect(page.getByRole('button', { name: 'Faire clignoter la clayette' })).toBeDisabled();
+  await expect(page.getByRole('link', { name: 'Ouvrir le labo Bluetooth' })).toHaveAttribute('href', '#/montrouge-labo');
+});
+
+test('S15-01 labo Bluetooth : GATT, composeur, test « État des rangées », réponses corrélées, journal', async ({ page }) => {
+  await page.route('https://cdn.jsdelivr.net/**', (r) => r.abort());
+  await page.addInitScript(() => {
+    const ecouteurs = [];
+    window.ecrits = [];
+    const notif = { uuid: '569a2001-b87f-490c-92cb-11ba5ea5167c', properties: { notify: true }, addEventListener: (_, f) => ecouteurs.push(f), startNotifications: async () => {} };
+    const envoyer = (o) => ecouteurs.forEach((f) => f({ target: { value: new DataView(Uint8Array.from(o).buffer) } }));
+    // Le faux casier répond à une demande d'état (type 0x00) par l'état de la rangée.
+    const ecriture = { uuid: '569a2002-b87f-490c-92cb-11ba5ea5167c', properties: { write: true }, async writeValueWithResponse(v) {
+      const o = [...v]; window.ecrits.push(o);
+      if (o[3] === 0x00) { const a = o[2]; const corps = [a, 0x00, 0x3f]; setTimeout(() => envoyer([0xff, corps.reduce((x, y) => x + y, 0) & 255, ...corps, 0xff]), 20); }
+    } };
+    const appareil = { name: 'CAVEASY', addEventListener() {}, gatt: { connected: false, async connect() { this.connected = true; return { getPrimaryServices: async () => [{ getCharacteristics: async () => [notif, ecriture] }] }; }, disconnect() { this.connected = false; } } };
+    Object.defineProperty(navigator, 'bluetooth', { value: { requestDevice: async () => appareil }, configurable: true });
+    Object.defineProperty(window, 'isSecureContext', { value: true });
+  });
+  await page.goto('./#/montrouge-labo');
+  await page.getByRole('button', { name: 'Connecter le casier' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'dont 1 en écriture' })).toBeVisible();
+  // Composeur : somme et échappement calculés
+  await page.getByLabel('Adresse (rangée)').fill('2');
+  await page.getByLabel('Type (hexa)').fill('45');
+  await page.getByLabel('Données (hexa)').fill('5c 00 5c');
+  await expect(page.locator('.apercu-trame')).toHaveText('ff fe ff 02 45 5c 00 5c ff');
+  // Test guidé
+  await page.getByRole('button', { name: 'État des rangées' }).click();
+  await expect(page.locator('.labo-tableau tbody tr')).toHaveCount(8, { timeout: 15000 });
+  const ecrits = await page.evaluate(() => window.ecrits);
+  expect(ecrits[0]).toEqual([0xff, 0x01, 0x01, 0x00, 0xff]);
+  await expect(page.locator('.labo-journal')).toContainText('↩');
+  await expect(page.locator('.labo-journal')).toContainText('type 0x00 (état de rangée) · 3f');
+  await page.getByLabel('Note pour le journal').fill('rangée 3 vide');
+  await page.getByRole('button', { name: 'Noter' }).click();
+  await expect(page.locator('.labo-journal li').first()).toContainText('### rangée 3 vide');
 });

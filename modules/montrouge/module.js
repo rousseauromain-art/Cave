@@ -3,6 +3,7 @@ import { remplacer } from '../../core/ui/dom.js';
 import { emplacement as rond } from '../../core/ui/badges.js';
 import { inventaire, prochainNumero, EN_CAVE } from '../../core/inventaire.js';
 import { creerCasier } from './ble.js';
+import { ecranLabo } from './labo.js';
 import { differences, emplacement } from './protocole.js';
 
 const INCONNU = { titre: 'Non identifiée', fond: 'var(--c-bord-fort)', texte: 'var(--c-texte)' };
@@ -163,8 +164,8 @@ async function ecran(core, el, { id }) {
     h('details', { class: 'section' }, h('summary', {}, h('span', { class: 'section-titre' }, 'Mouvements')), h('div', { class: 'section-corps' }, mouvements)),
     h('div', { class: 'carte experimental' },
       h('strong', {}, 'Expérimental'),
-      h('p', { class: 'discret' }, 'Faire clignoter une clayette, température et humidité : commandes du casier pas encore décodées (journal Bluetooth complet nécessaire).'),
-      h('button', { type: 'button', class: 'bouton', disabled: true }, 'Faire clignoter la clayette')));
+      h('p', { class: 'discret' }, 'Faire clignoter une clayette, température et humidité : commandes du casier pas encore décodées. Le labo permet de les chercher.'),
+      h('a', { href: '#/montrouge-labo', class: 'bouton' }, 'Ouvrir le labo Bluetooth')));
   dessiner();
 }
 
@@ -173,6 +174,9 @@ export default {
   titre: 'Casier Montrouge connecté',
   flag: { defaut: true, experimental: false },
   profils: ['vin'],
-  ecrans: [{ route: '/montrouge/:id', titre: 'Casier connecté', onglet: '/rangements', rendu: ecran }],
+  ecrans: [
+    { route: '/montrouge-labo', titre: 'Labo Bluetooth', onglet: '/rangements', rendu: ecranLabo },
+    { route: '/montrouge/:id', titre: 'Casier connecté', onglet: '/rangements', rendu: ecran }
+  ],
   tables: ['bouteilles']
 };

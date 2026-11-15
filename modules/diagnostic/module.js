@@ -22,7 +22,8 @@ function reglages(core, el) {
   };
   el.append(h('details', { class: 'section', 'data-carte': 'diagnostic' },
     h('summary', {}, h('span', { class: 'section-titre' }, 'Diagnostic'), h('span', { class: 'section-resume' }, 'journal')),
-    h('div', { class: 'section-corps' }, tableau, journal, h('button', { type: 'button', class: 'bouton', onclick: exporter }, 'Exporter le journal'))));
+    h('div', { class: 'section-corps' }, tableau, journal, h('div', { class: 'boutons' }, h('button', { type: 'button', class: 'bouton', onclick: exporter }, 'Exporter le journal'),
+      core.moduleActif('montrouge') ? h('a', { href: '#/montrouge-labo', class: 'bouton' }, 'Labo Bluetooth du casier') : null))));
   lignes();
 }
 
