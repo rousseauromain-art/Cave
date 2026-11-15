@@ -1,7 +1,7 @@
 // Labo Bluetooth du casier Montrouge : explorer le GATT, journaliser et décoder le flux, composer et envoyer
 // des trames, dérouler des tests guidés (état des rangées, rejeu, hypothèses LED, balayage des types).
 import { remplacer } from '../../core/ui/dom.js';
-import { creerDecodeur, lireTrame, encoderTrame, TYPES_CONNUS, hexa, lireHexa } from './protocole.js';
+import { creerDecodeur, lireTrame, encoderTrame, TYPES_CONNUS, hexa, lireHexa, detailTrame } from './protocole.js';
 
 const SERVICE = '569a1101-b87f-490c-92cb-11ba5ea5167c';
 const NOMS = ['CAVEASY', 'Caveasy', 'caveasy', 'CavEasy', 'Montrouge'];
@@ -59,7 +59,8 @@ export async function ecranLabo(core, el) {
     c.n++; c.donnees = t.donnees;
     session.compteurs.set(cle, c);
     const suite = session.dernierEnvoi && Date.now() - session.dernierEnvoi.quand < 1500 ? `  ↩ ${Date.now() - session.dernierEnvoi.quand} ms après ${session.dernierEnvoi.texte}` : '';
-    noter('TRAME', `adr ${t.adresse} · type 0x${t.type.toString(16).padStart(2, '0')} (${nomType(t.type)}) · ${hexa(t.donnees) || '—'}${suite}`);
+    const detail = detailTrame(t);
+    noter('TRAME', `adr ${t.adresse} · type 0x${t.type.toString(16).padStart(2, '0')} (${nomType(t.type)}) · ${hexa(t.donnees) || '—'}${detail ? `\n${' '.repeat(21)}→ ${detail}` : ''}${suite}`);
     dessinerTableau();
   });
 
@@ -105,8 +106,11 @@ export async function ecranLabo(core, el) {
     remplacer(choixCarac, ...ecrivables().map((c) => h('option', { value: c.uuid }, `${court(c.uuid)} (${c.properties.write ? 'avec réponse' : 'sans réponse'})`)));
   }
 
-  async function envoyer(octets, texte) {
-    const c = ecrivables().find((x) => x.uuid === choixCarac.value) || ecrivables()[0];
+  // Une seule opération GATT à la fois (sinon « GATT operation already in progress »).
+  let file = Promise.resolve();
+  const envoyer = (octets, texte, uuid = null) => (file = file.then(() => ecrire(octets, texte, uuid), () => ecrire(octets, texte, uuid)));
+  async function ecrire(octets, texte, uuid) {
+    const c = ecrivables().find((x) => x.uuid === (uuid || choixCarac.value)) || ecrivables()[0];
     if (!c || !session.appareil?.gatt.connected) { statut.textContent = 'Connectez d’abord le casier (aucune caractéristique en écriture).'; return false; }
     const v = Uint8Array.from(octets);
     try {
@@ -119,7 +123,7 @@ export async function ecranLabo(core, el) {
       return false;
     }
   }
-  const envoyerTrame = (adresse, type, donnees) => envoyer(encoderTrame(adresse, type, donnees), `adr ${adresse} type 0x${type.toString(16).padStart(2, '0')} ${hexa(donnees)}`.trim());
+  const envoyerTrame = (adresse, type, donnees, uuid) => envoyer(encoderTrame(adresse, type, donnees), `adr ${adresse} type 0x${type.toString(16).padStart(2, '0')} ${hexa(donnees)}`.trim(), uuid);
 
   // Composeur : trame du protocole (somme et échappement calculés) ou octets bruts.
   const mode = h('select', { 'aria-label': 'Mode d’envoi' }, h('option', { value: 'trame' }, 'Trame du protocole'), h('option', { value: 'brut' }, 'Octets bruts'));
@@ -134,8 +138,11 @@ export async function ecranLabo(core, el) {
   majApercu();
 
   // Tests guidés.
-  async function derouler(titre, etapes, { pause = 1200, reaction = false } = {}) {
+  async function derouler(titre, etapes, { pause = 1200, reaction = false, partout = false } = {}) {
+    if (session.test) { statut.textContent = `Un test est déjà en cours (« ${session.test} ») : arrêtez-le d'abord.`; return; }
+    session.test = titre;
     session.arret = false;
+    boutonsTests.forEach((b) => { b.disabled = true; });
     noter('NOTE', `### Test « ${titre} » (${etapes.length} envois)`);
     for (let i = 0; i < etapes.length && !session.arret; i++) {
       const [a, t, d] = etapes[i];
@@ -143,9 +150,15 @@ export async function ecranLabo(core, el) {
         h('div', { class: 'boutons' },
           reaction ? h('button', { type: 'button', class: 'bouton principal', onclick: () => noter('NOTE', `### RÉACTION observée sur ${session.dernierEnvoi?.texte}`) }, 'Ça a réagi !') : null,
           h('button', { type: 'button', class: 'bouton', onclick: () => { session.arret = true; } }, 'Arrêter')));
-      if (!(await envoyerTrame(a, t, d))) break;
-      await attendre(pause);
+      // « partout » : la même trame sur chaque caractéristique d'écriture (2001, 2003…).
+      const cibles = partout ? ecrivables().map((c) => c.uuid) : [null];
+      let ok = true;
+      for (const u of cibles) { ok = (await envoyerTrame(a, t, d, u)) && ok; await attendre(partout ? pause : 0); }
+      if (!ok && !partout) break;
+      if (!partout) await attendre(pause);
     }
+    session.test = null;
+    boutonsTests.forEach((b) => { b.disabled = false; });
     noter('NOTE', `### Fin du test « ${titre} »${session.arret ? ' (arrêté)' : ''}`);
     remplacer(zoneTest, h('p', { class: 'discret' }, `Test « ${titre} » terminé. Les réponses sont marquées ↩ dans le journal.`));
   }
@@ -154,6 +167,8 @@ export async function ecranLabo(core, el) {
   const r = () => Math.max(1, Math.min(8, Number(rangeeTest.value) || 1));
   const bit = () => 1 << (Math.max(1, Math.min(8, Number(placeTest.value) || 1)) - 1);
   const TESTS = [
+    { titre: 'Chaque voie d’écriture', aide: 'Rejoue la dernière trame reçue puis une demande d’état, sur CHAQUE caractéristique d’écriture (2001 puis 2003…). Si le casier relaie, la trame réapparaît dans le flux.', partout: true, pause: 1500,
+      etapes: () => [...(session.derniereRecue ? [[session.derniereRecue.adresse, session.derniereRecue.type, session.derniereRecue.donnees]] : []), [r(), 0x00, []], [r(), 0x00, [0x3b]]] },
     { titre: 'État des rangées', aide: 'Type 0x00 vers les rangées 1 à 8, comme le ferait la passerelle. Sans risque : simple demande.', etapes: () => [1, 2, 3, 4, 5, 6, 7, 8].map((a) => [a, 0x00, []]) },
     { titre: 'Rejouer la dernière trame reçue', aide: 'Renvoie telle quelle la dernière trame valide reçue (voir si le casier l’accepte en entrée).', etapes: () => (session.derniereRecue ? [[session.derniereRecue.adresse, session.derniereRecue.type, session.derniereRecue.donnees]] : []) },
     { titre: 'Hypothèses LED', aide: 'Types 0x41 à 0x4F (voisins de 0x45) avec le masque de l’emplacement choisi, 2 s entre chaque. Regardez la clayette et touchez « Ça a réagi ! ».', reaction: true, pause: 2000,
@@ -162,6 +177,7 @@ export async function ecranLabo(core, el) {
       etapes: () => Array.from({ length: 64 }, (_, t) => [r(), t, []]) }
   ];
 
+  const boutonsTests = [];
   const note = h('input', { placeholder: 'ex. je pose une bouteille en R3-E2', 'aria-label': 'Note pour le journal' });
   const exporter = () => {
     const url = URL.createObjectURL(new Blob([lignes.join('\n')], { type: 'text/plain' }));
@@ -184,8 +200,8 @@ export async function ecranLabo(core, el) {
       h('h2', {}, 'Tests guidés'),
       h('p', { class: 'avertissement' }, 'Écrire des trames inconnues peut modifier le comportement du casier. Commencez par « État des rangées » et « Rejouer », une rangée vide de préférence.'),
       h('div', { class: 'ligne-champs' }, h('label', {}, 'Rangée ', rangeeTest), h('label', {}, 'Emplacement ', placeTest)),
-      h('ul', { class: 'liste-tests' }, TESTS.map((t) => h('li', {},
-        h('button', { type: 'button', class: 'bouton', onclick: () => derouler(t.titre, t.etapes(), t) }, t.titre),
+      h('ul', { class: 'liste-tests' }, TESTS.map((t, i) => h('li', {},
+        boutonsTests[i] = h('button', { type: 'button', class: 'bouton', onclick: () => derouler(t.titre, t.etapes(), t) }, t.titre),
         h('span', { class: 'discret' }, t.aide)))),
       zoneTest),
     h('section', { class: 'carte' },
