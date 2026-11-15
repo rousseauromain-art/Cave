@@ -105,7 +105,7 @@ test('S15-01 labo Bluetooth : GATT, composeur, test « État des rangées », r�
   const ecrits = await page.evaluate(() => window.ecrits);
   expect(ecrits[0]).toEqual([0xff, 0x01, 0x01, 0x00, 0xff]);
   await expect(page.locator('.labo-journal')).toContainText('↩');
-  await expect(page.locator('.labo-journal')).toContainText('type 0x00 (état de rangée) · 3f');
+  await expect(page.locator('.labo-journal')).toContainText('type 0x00 (code passerelle → rangée) · 3f');
   await page.getByLabel('Note pour le journal').fill('rangée 3 vide');
   await page.getByRole('button', { name: 'Noter' }).click();
   await expect(page.locator('.labo-journal li').first()).toContainText('### rangée 3 vide');

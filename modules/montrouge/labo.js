@@ -168,10 +168,15 @@ export async function ecranLabo(core, el) {
   const rangeeTest = h('input', { type: 'number', min: '1', max: '8', value: '1', inputmode: 'numeric', 'aria-label': 'Rangée testée' });
   const placeTest = h('input', { type: 'number', min: '1', max: '8', value: '1', inputmode: 'numeric', 'aria-label': 'Emplacement testé' });
   const r = () => Math.max(1, Math.min(8, Number(rangeeTest.value) || 1));
+  const carac2003 = () => session.caracs.find((x) => /2003/.test(court(x.uuid)));
   const bit = () => 1 << (Math.max(1, Math.min(8, Number(placeTest.value) || 1)) - 1);
   const TESTS = [
     { titre: 'Chaque voie d’écriture', aide: 'Rejoue la dernière trame reçue puis une demande d’état, sur CHAQUE caractéristique d’écriture (2001 puis 2003…). Si le casier relaie, la trame réapparaît dans le flux.', partout: true, pause: 1500,
       etapes: () => [...(session.derniereRecue ? [[session.derniereRecue.adresse, session.derniereRecue.type, session.derniereRecue.donnees]] : []), [r(), 0x00, []], [r(), 0x00, [0x3b]]] },
+    { titre: '2003 : octet seul (balayage)', aide: 'Le 15/11, « 01 » sur 2003 a fait dialoguer la passerelle avec la rangée 1. Envoie 00 à 1F un par un, 4 s entre chaque : regardez TOUT le casier et touchez « Ça a réagi ! ».', reaction: true, continuer: true, pause: 4000,
+      etapes: () => { const c = carac2003(); return c ? Array.from({ length: 32 }, (_, v) => ({ octets: [v], uuid: c.uuid, texte: `2003 · ${hexa([v])}` })) : []; } },
+    { titre: 'Session 2003 puis codes sur 2001', aide: 'Hypothèse : « 01 » sur 2003 ouvre une session pendant laquelle 2001 est relayé. Envoie 01 sur 2003, puis les codes 30 à 3F vers la rangée choisie (type 0x00, comme la passerelle).', reaction: true, continuer: true, pause: 2500,
+      etapes: () => { const c = carac2003(); return c ? [{ octets: [0x01], uuid: c.uuid, texte: '2003 · 01 (ouverture ?)' }, ...Array.from({ length: 16 }, (_, i) => [r(), 0x00, [0x30 + i]])] : []; } },
     { titre: '2003 : commandes courtes', aide: '2003 accepte 1 ou 2 octets. Essaie [rangée, emplacement] sous plusieurs formes (masque, numéro, ordre inversé, rangée comptée depuis 0), 3 s entre chaque. Regardez la clayette choisie.', reaction: true, continuer: true, pause: 3000,
       etapes: () => {
         const c = session.caracs.find((x) => /2003/.test(court(x.uuid)));
