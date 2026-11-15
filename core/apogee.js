@@ -104,6 +104,9 @@ export const SERVICE = {
   champagne: [7, 9], champRose: [7, 9], prosecco: [6, 8]
 };
 
+// Température de service : celle du producteur si elle a été lue (page web), sinon celle du style.
+export const temperaturePour = (p) => p.extra?.temperature || SERVICE[p.style] || null;
+
 // Courbe de garde pour le dessin : points [année, qualité 0..1] entre le millésime et fin + durée.
 export function courbe(millesime, debut, fin) {
   const span = Math.max(1, fin - debut), finTrace = fin + span + 1;

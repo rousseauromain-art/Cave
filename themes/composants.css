@@ -329,3 +329,9 @@ a.bouton { text-decoration: none; }
 .carte-maj h3 { margin: 0; font-size: 16px; }
 .case-maj { display: flex; gap: 10px; align-items: flex-start; min-height: 40px; font-size: 14px; line-height: 1.35; }
 .case-maj input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--c-accent); }
+/* Scanner : depuis un lien */
+.ligne-lien { display: flex; gap: 8px; }
+.ligne-lien input { flex: 1; min-width: 0; min-height: 44px; }
+.colle-page summary { min-height: 40px; display: flex; align-items: center; color: var(--c-accent); font-weight: 600; cursor: pointer; }
+.colle-page textarea { width: 100%; margin: 4px 0 8px; }
+.face-scan .vignette-vide { width: 100%; height: 120px; border-radius: 14px; }

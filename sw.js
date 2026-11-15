@@ -1,5 +1,5 @@
 // Service worker : l'app s'ouvre hors ligne. Réseau d'abord (mises à jour immédiates), cache en secours.
-const VERSION = '0.13.1'; // aligné sur core/version.js (vérifié par les tests)
+const VERSION = '0.14.0'; // aligné sur core/version.js (vérifié par les tests)
 const CACHE = `cave-${VERSION}`;
 const COQUILLE = [
   './', './index.html', './manifest.webmanifest',
@@ -7,7 +7,7 @@ const COQUILLE = [
   './core/app.js', './core/registry.js', './core/router.js', './core/flags.js', './core/theme.js',
   './core/kv.js', './core/evenements.js', './core/version.js', './core/config.js',
   './core/schema.js', './core/fusion.js', './core/store.js', './core/sync.js', './core/supabase.js', './core/sauvegarde.js',
-  './core/inventaire.js', './core/photos.js', './core/import-v9.js', './core/cles.js', './core/import-whisky.js', './core/import-photos.js', './core/identification.js', './data/apogee.json',
+  './core/inventaire.js', './core/photos.js', './core/import-v9.js', './core/cles.js', './core/import-whisky.js', './core/import-photos.js', './core/identification.js', './core/web.js', './data/apogee.json',
   './core/ui/dom.js', './core/ui/icones.js', './core/ui/a-venir.js', './core/ui/badges.js', './core/ui/radar.js', './core/ui/toast.js', './core/ui/profils.js', './core/ui/etagere.js', './core/ui/degustation.js', './core/degustations.js', './core/rangements.js', './core/ui/courbe.js', './core/apogee.js',
   './data/styles.js', './data/drapeaux.js', './data/filtres.js', './data/pays.js',
   './modules/ce-soir/module.js', './modules/cave/module.js',
@@ -35,7 +35,8 @@ self.addEventListener('fetch', (e) => {
   const externe = /(^fonts\.(googleapis|gstatic)\.com|^cdn\.jsdelivr\.net)$/.test(new URL(req.url).hostname);
   if (!memeOrigine && !externe) return;
   e.respondWith(
-    fetch(req).then((rep) => {
+    // no-cache : revalide auprès du serveur (sinon le cache HTTP de GitHub Pages sert l'ancienne version 10 min).
+    fetch(req, memeOrigine ? { cache: 'no-cache' } : undefined).then((rep) => {
       if (rep.ok) { const copie = rep.clone(); caches.open(CACHE).then((c) => c.put(req, copie)); }
       return rep;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match('./index.html')))
