@@ -1,5 +1,5 @@
 // Service worker : l'app s'ouvre hors ligne. Réseau d'abord (mises à jour immédiates), cache en secours.
-const VERSION = '0.15.1'; // aligné sur core/version.js (vérifié par les tests)
+const VERSION = '0.15.2'; // aligné sur core/version.js (vérifié par les tests)
 const CACHE = `cave-${VERSION}`;
 const COQUILLE = [
   './', './index.html', './manifest.webmanifest',

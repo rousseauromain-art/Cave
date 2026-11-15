@@ -138,23 +138,26 @@ export async function ecranLabo(core, el) {
   majApercu();
 
   // Tests guidés.
-  async function derouler(titre, etapes, { pause = 1200, reaction = false, partout = false } = {}) {
+  async function derouler(titre, etapes, { pause = 1200, reaction = false, partout = false, continuer = false } = {}) {
     if (session.test) { statut.textContent = `Un test est déjà en cours (« ${session.test} ») : arrêtez-le d'abord.`; return; }
     session.test = titre;
     session.arret = false;
     boutonsTests.forEach((b) => { b.disabled = true; });
     noter('NOTE', `### Test « ${titre} » (${etapes.length} envois)`);
     for (let i = 0; i < etapes.length && !session.arret; i++) {
-      const [a, t, d] = etapes[i];
-      remplacer(zoneTest, h('p', {}, `${titre} : ${i + 1}/${etapes.length} — adr ${a}, type 0x${t.toString(16).padStart(2, '0')}, ${hexa(d) || 'sans données'}`),
+      // Étape = trame [adresse, type, données], ou octets bruts { octets, uuid, texte }.
+      const brut = !Array.isArray(etapes[i]) ? etapes[i] : null;
+      const [a, t, d] = brut ? [] : etapes[i];
+      remplacer(zoneTest, h('p', {}, `${titre} : ${i + 1}/${etapes.length} — ${brut ? brut.texte : `adr ${a}, type 0x${t.toString(16).padStart(2, '0')}, ${hexa(d) || 'sans données'}`}`),
         h('div', { class: 'boutons' },
           reaction ? h('button', { type: 'button', class: 'bouton principal', onclick: () => noter('NOTE', `### RÉACTION observée sur ${session.dernierEnvoi?.texte}`) }, 'Ça a réagi !') : null,
           h('button', { type: 'button', class: 'bouton', onclick: () => { session.arret = true; } }, 'Arrêter')));
       // « partout » : la même trame sur chaque caractéristique d'écriture (2001, 2003…).
       const cibles = partout ? ecrivables().map((c) => c.uuid) : [null];
       let ok = true;
-      for (const u of cibles) { ok = (await envoyerTrame(a, t, d, u)) && ok; await attendre(partout ? pause : 0); }
-      if (!ok && !partout) break;
+      if (brut) ok = await envoyer(brut.octets, brut.texte, brut.uuid);
+      else for (const u of cibles) { ok = (await envoyerTrame(a, t, d, u)) && ok; await attendre(partout ? pause : 0); }
+      if (!ok && !partout && !continuer) break;
       if (!partout) await attendre(pause);
     }
     session.test = null;
@@ -169,6 +172,8 @@ export async function ecranLabo(core, el) {
   const TESTS = [
     { titre: 'Chaque voie d’écriture', aide: 'Rejoue la dernière trame reçue puis une demande d’état, sur CHAQUE caractéristique d’écriture (2001 puis 2003…). Si le casier relaie, la trame réapparaît dans le flux.', partout: true, pause: 1500,
       etapes: () => [...(session.derniereRecue ? [[session.derniereRecue.adresse, session.derniereRecue.type, session.derniereRecue.donnees]] : []), [r(), 0x00, []], [r(), 0x00, [0x3b]]] },
+    { titre: 'Longueur acceptée par 2003', aide: '2003 refuse nos trames (« invalid attribute length ») : elle attend une taille fixe. Envoie 1 à 20 octets à zéro et note les tailles acceptées (sans « ERREUR »).', continuer: true, pause: 600,
+      etapes: () => { const c = session.caracs.find((x) => /2003/.test(court(x.uuid))); return c ? Array.from({ length: 20 }, (_, i) => ({ octets: new Array(i + 1).fill(0), uuid: c.uuid, texte: `2003 · ${i + 1} octet${i ? 's' : ''} à zéro` })) : []; } },
     { titre: 'État des rangées', aide: 'Type 0x00 vers les rangées 1 à 8, comme le ferait la passerelle. Sans risque : simple demande.', etapes: () => [1, 2, 3, 4, 5, 6, 7, 8].map((a) => [a, 0x00, []]) },
     { titre: 'Rejouer la dernière trame reçue', aide: 'Renvoie telle quelle la dernière trame valide reçue (voir si le casier l’accepte en entrée).', etapes: () => (session.derniereRecue ? [[session.derniereRecue.adresse, session.derniereRecue.type, session.derniereRecue.donnees]] : []) },
     { titre: 'Hypothèses LED', aide: 'Types 0x41 à 0x4F (voisins de 0x45) avec le masque de l’emplacement choisi, 2 s entre chaque. Regardez la clayette et touchez « Ça a réagi ! ».', reaction: true, pause: 2000,

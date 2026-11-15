@@ -1,7 +1,8 @@
 // Protocole du casier Montrouge (ex-Caveasy), décodé en v9 :
 // flux série sur notifications ; 0xFF sépare les trames, 0xFE échappe l'octet suivant.
 // Trame = [somme des octets suivants mod 256][adresse][type][données].
-// Type 0x45 : capteurs d'une rangée (adresse = n° de rangée) → [masque présent][bits éteints][bits allumés].
+// Type 0x45 : capteurs d'une rangée (adresse = n° de rangée) → [posés][retirés][présents] (vérifié sur le casier réel
+// le 15/11/2026 : retrait de E3 avec E5 en place → « 00 04 10 »). Rangée 1 en bas, bit 0 = emplacement 1 à gauche.
 
 export function creerDecodeur(surTrame) {
   let tampon = [], echappe = false;
@@ -42,8 +43,11 @@ export function encoderTrame(adresse, type, donnees = []) {
   return [0xff, ...brut.flatMap((b) => (b === 0xff || b === 0xfe ? [0xfe, b] : [b])), 0xff];
 }
 
-// Trame 0x45 (tests et simulateur).
-export const encoderRangee = (rangee, masque) => encoderTrame(rangee, 0x45, [masque, 0, masque]);
+// Trame 0x45 (tests et simulateur) : présents, et facultativement posés / retirés.
+export const encoderRangee = (rangee, presents, poses = presents, retires = 0) => encoderTrame(rangee, 0x45, [poses, retires, presents]);
+
+// Masque des bouteilles présentes d'une trame 0x45.
+export const presentsDe = (t) => (t.donnees.length >= 3 ? t.donnees[2] : t.donnees[0]);
 
 // Types observés (v9) ; les autres sont à découvrir avec le labo.
 export const TYPES_CONNUS = { 0x00: 'état de rangée', 0x21: 'passerelle (journal)', 0x40: 'module', 0x45: 'capteurs de rangée' };
@@ -56,14 +60,15 @@ export function detailTrame({ adresse, type, donnees: d }) {
   const ascii = (o) => o.map((b) => (b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : '·')).join('');
   if (type === 0x45 && d.length >= 3) {
     const places = (m) => [0, 1, 2, 3, 4, 5, 6, 7].filter((i) => m & (1 << i)).map((i) => `E${i + 1}`).join('+') || '—';
-    return `rangée ${adresse} : posé ${places(d[2])}, retiré ${places(d[1])}, présents ${places(d[0])}`;
+    return `rangée ${adresse} : posé ${places(d[0])}, retiré ${places(d[1])}, présents ${places(d[2])}`;
   }
   if (type === 0x21 && d.length >= 16) {
     const id = ascii(d.slice(3, 13)).trim();
     if (d[16] === 0x01 && d.length >= 27) {
       const tic = d[17] | (d[18] << 8) | (d[19] << 16) | (d[20] * 2 ** 24);
       const quand = new Date(Date.UTC(2019, 0, 1) + (tic / 8) * 1000);
-      return `passerelle ${id} : événement n° ${d[21]}, rangée ${d[23]}, ${hexa(d.slice(24))} · horloge ${quand.toISOString().slice(0, 19).replace('T', ' ')} ?`;
+      const places = (m) => [0, 1, 2, 3, 4, 5, 6, 7].filter((i) => m & (1 << i)).map((i) => `E${i + 1}`).join('+') || '—';
+      return `passerelle ${id} : événement n° ${d[21]}, rangée ${d[23]} : posé ${places(d[24])}, retiré ${places(d[25])}, présents selon la passerelle ${places(d[26])} · horloge ${quand.toISOString().slice(0, 19).replace('T', ' ')} ?`;
     }
     return `passerelle ${id} : ${d[16] === 0x00 ? 'début' : d[16] === 0xff ? 'fin' : `genre ${d[16]}`}`;
   }
