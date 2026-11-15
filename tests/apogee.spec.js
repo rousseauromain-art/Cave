@@ -12,8 +12,23 @@ test('S4-01 phases et estimation par la table', async () => {
   const table = { 'France > Rhône > Côtes du Rhône Villages': { Rouge: [2, 5], Blanc: [1, 3] }, 'France > Bourgogne > Meursault': { Blanc: [3, 10] } };
   expect(estimer({ millesime: 2018, appellation: 'Côtes du Rhône Villages', style: 'rouge' }, table)).toMatchObject({ debut: 2020, fin: 2023 });
   expect(estimer({ millesime: 2019, appellation: 'meursault', style: 'blanc' }, table)).toMatchObject({ debut: 2022, fin: 2029 });
-  expect(estimer({ millesime: 2019, appellation: 'Meursault', style: 'rouge' }, table)).toBeNull();
-  expect(estimer({ appellation: 'Meursault', style: 'blanc' }, table)).toBeNull();
+  expect(estimer({ appellation: 'Meursault', style: 'blanc' }, table)).toBeNull(); // sans millésime, rien
+});
+
+test('S11-01 apogée : appellation approchée, région, fenêtre générique, entrées vides ignorées', async () => {
+  const { estimer, prerequis } = await import(pathToFileURL(path.join(__dirname, '../core/apogee.js')).href);
+  const table = {
+    'France > Rhône > Ventoux': { Rouge: [2, 5] }, 'France > Rhône > Gigondas': { Rouge: [5, 15] }, 'France > Rhône > Vacqueyras': { Rouge: [4, 10] },
+    'Italie > Abruzzo > Ortona': { Rouge: [null, null] }
+  };
+  expect(estimer({ millesime: 2019, appellation: 'AOP Ventoux', style: 'rouge' }, table)).toMatchObject({ debut: 2021, fin: 2024, precision: 'appellation' });
+  expect(estimer({ millesime: 2019, appellation: 'Ventoux rouge', style: 'rouge' }, table)).toMatchObject({ debut: 2021, precision: 'appellation' });
+  expect(estimer({ millesime: 2019, region: 'Rhône', style: 'rouge' }, table)).toMatchObject({ debut: 2023, fin: 2029, precision: 'region' });
+  expect(estimer({ millesime: 2019, appellation: 'Ortona', style: 'rouge' }, table)).toMatchObject({ debut: 2022, fin: 2027, precision: 'generique' });
+  expect(estimer({ millesime: 2019, style: 'blanc' }, table)).toMatchObject({ debut: 2020, fin: 2023, precision: 'generique' });
+  const l = prerequis({ millesime: null, style: 'rouge', styleInfo: { titre: 'Rouge' } }, 'apogee');
+  expect(l[0]).toMatchObject({ libelle: 'Millésime', ok: false, requis: true });
+  expect(prerequis({}, 'aeration')[0]).toMatchObject({ libelle: 'Couleur', ok: false, requis: true });
 });
 
 test('S4-02 aération : règle, bornes, effervescents, plafond Essentiel', async () => {
@@ -65,7 +80,7 @@ test.describe('écrans', () => {
     await expect(apogee.locator('.section-resume')).toHaveText('Déclin');
     await expect(apogee).toContainText("Estimation — Table d'apogée Caveasy : France > Rhône > Côtes du Rhône Villages");
     await apogee.getByRole('button', { name: /^Retenir 20\d\d–20\d\d$/ }).click();
-    await expect(page.locator('[data-section="apogee"]')).toContainText('Source : Table');
+    await expect(page.locator('[data-section="apogee"]')).toContainText('Retenue — Table');
     await page.locator('[data-section="aeration"] summary').click();
     await expect(page.locator('[data-section="aeration"] .section-resume')).toHaveText('2 h');
     await page.getByRole('link', { name: 'Préparer le service' }).click();
@@ -94,5 +109,32 @@ test.describe('écrans', () => {
     await page.locator('[data-carte="diagnostic"] summary').click();
     await expect(page.locator('[data-carte="diagnostic"]')).toContainText('Version');
     await expect(page.getByRole('button', { name: 'Exporter le journal' })).toBeVisible();
+  });
+
+  test('S11-02 fiche : informations requises affichées, calcul dès qu’elles sont saisies, Recalculer', async ({ page }) => {
+    const pid = await page.evaluate(async () => (await (await import('/core/store.js')).creerStore('cave').put('produits', { profil: 'vin', nom: 'La Rabassière' })).id);
+    await page.goto(`./#/fiche/${pid}`);
+    const apogee = page.locator('[data-section="apogee"]');
+    await expect(apogee.locator('.section-resume')).toHaveText('à compléter');
+    await expect(apogee.locator('.prerequis li.requis')).toContainText('Millésime : obligatoire');
+    await expect(page.locator('[data-section="aeration"] .section-resume')).toHaveText('à compléter');
+    await page.locator('[data-section="aeration"]').evaluate((d) => { d.open = true; });
+    await expect(page.locator('[data-section="aeration"] .prerequis li.requis')).toContainText('Couleur : obligatoire');
+    // Compléter la fiche : millésime, couleur, appellation libellée « AOP Ventoux »
+    await apogee.getByRole('link', { name: 'Compléter la fiche' }).click();
+    await page.getByLabel('Millésime').fill('2019');
+    await page.locator('select[name="style"]').selectOption('rouge');
+    await page.getByLabel('Appellation').fill('AOP Ventoux');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page).toHaveURL(/#\/fiche\//);
+    await expect(apogee).toContainText('France > Rhône > Ventoux');
+    await expect(apogee.locator('.prerequis li.ok')).toHaveCount(3);
+    await expect(page.locator('[data-section="aeration"] .section-resume')).toHaveText(/\d+ h/);
+    // Années enregistrées à la main → Recalculer revient au calcul
+    await page.evaluate(async (x) => { const s = (await import('/core/store.js')).creerStore('cave'); const p = await s.get('produits', x); await s.put('produits', { ...p, apogee_debut: 2030, apogee_fin: 2040 }); }, pid);
+    await page.reload();
+    await expect(apogee).toContainText('Années saisies dans la fiche.');
+    await apogee.getByRole('button', { name: /^Recalculer \(20\d\d–20\d\d\)$/ }).click();
+    await expect(apogee).toContainText('Estimation — Table');
   });
 });
