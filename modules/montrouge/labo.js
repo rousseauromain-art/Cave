@@ -54,6 +54,8 @@ export async function ecranLabo(core, el) {
     const t = lireTrame(f);
     if (!t.valide) { noter('INVAL', hexa(f)); return; }
     session.derniereRecue = t;
+    // Numéro du dernier événement de la passerelle (0x21, genre 01) : sert au test « Interroger le journal ».
+    if (t.type === 0x21 && t.donnees[16] === 0x01 && t.donnees.length >= 23) session.dernierEvenement = t.donnees[21] | (t.donnees[22] << 8);
     const cle = `${t.adresse}-${t.type}`;
     const c = session.compteurs.get(cle) || { adresse: t.adresse, type: t.type, n: 0, donnees: [] };
     c.n++; c.donnees = t.donnees;
@@ -173,6 +175,17 @@ export async function ecranLabo(core, el) {
   const TESTS = [
     { titre: 'Chaque voie d’écriture', aide: 'Rejoue la dernière trame reçue puis une demande d’état, sur CHAQUE caractéristique d’écriture (2001 puis 2003…). Si le casier relaie, la trame réapparaît dans le flux.', partout: true, pause: 1500,
       etapes: () => [...(session.derniereRecue ? [[session.derniereRecue.adresse, session.derniereRecue.type, session.derniereRecue.donnees]] : []), [r(), 0x00, []], [r(), 0x00, [0x3b]]] },
+    { titre: 'Interroger le journal', aide: 'La passerelle numérote ses événements sur 2 octets ; 2003 accepte 2 octets. Demande les derniers numéros (ordre faible-fort puis fort-faible) et quelques valeurs repères. Les réponses peuvent arriver sur 2000 ou 2002. Bougez d’abord une bouteille pour que le dernier numéro soit connu.', continuer: true, pause: 2000,
+      etapes: () => {
+        const c = carac2003();
+        if (!c) return [];
+        const n = session.dernierEvenement ?? 0;
+        const numeros = [n, n - 1, n - 2, n - 10, n - 100, 0, 1].filter((x) => x >= 0);
+        return [...numeros.flatMap((x) => [
+          { octets: [x & 255, x >> 8], uuid: c.uuid, texte: `2003 · ${hexa([x & 255, x >> 8])} (événement ${x}, faible-fort)` },
+          { octets: [x >> 8, x & 255], uuid: c.uuid, texte: `2003 · ${hexa([x >> 8, x & 255])} (événement ${x}, fort-faible)` }]),
+          ...[0x20, 0x21, 0x22, 0x30, 0x40, 0x80, 0xfe].map((v) => ({ octets: [v], uuid: c.uuid, texte: `2003 · ${hexa([v])}` }))];
+      } },
     { titre: '2003 : octet seul (balayage)', aide: 'Le 15/11, « 01 » sur 2003 a fait dialoguer la passerelle avec la rangée 1. Envoie 00 à 1F un par un, 4 s entre chaque : regardez TOUT le casier et touchez « Ça a réagi ! ».', reaction: true, continuer: true, pause: 4000,
       etapes: () => { const c = carac2003(); return c ? Array.from({ length: 32 }, (_, v) => ({ octets: [v], uuid: c.uuid, texte: `2003 · ${hexa([v])}` })) : []; } },
     { titre: 'Session 2003 puis codes sur 2001', aide: 'Hypothèse : « 01 » sur 2003 ouvre une session pendant laquelle 2001 est relayé. Envoie 01 sur 2003, puis les codes 30 à 3F vers la rangée choisie (type 0x00, comme la passerelle).', reaction: true, continuer: true, pause: 2500,
