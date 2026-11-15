@@ -17,7 +17,7 @@ test.describe('analyse sans navigateur', () => {
       { texte: '2019 Vin rouge', hauteur: 18 },
       { texte: '14,5 % vol', hauteur: 10 }
     ], index, 2026);
-    expect(r).toMatchObject({ nom: 'Les Cades', producteur: 'DOMAINE DE PEYRE BRUNE', appellation: 'Côtes du Rhône Villages', millesime: 2019, style: 'rouge', degre: 14.5 });
+    expect(r).toMatchObject({ nom: 'Les Cades', producteur: 'Domaine de Peyre Brune', appellation: 'Côtes du Rhône Villages', millesime: 2019, style: 'rouge', degre: 14.5 });
   });
 
   test('S2-02 réponse IA → fiche vin et fiche spiritueux', async () => {
@@ -154,5 +154,27 @@ test.describe('écran Scanner', () => {
     await page.locator('[data-section="texte-lu"] summary, details:has-text("Texte de l’étiquette") summary').first().click();
     await expect(page.locator('.texte-etiquette')).toContainText('MINERVOIS');
     await expect(page.locator('.texte-etiquette')).toContainText('— Verso —');
+  });
+
+  test('S12-01 bouteille reconnue : « Mettre à jour » reporte nom, appellation et photo dans la fiche', async ({ page }) => {
+    await page.route('https://api.ocr.space/**', (route) => route.fulfill({ json: { ParsedResults: [{ TextOverlay: { Lines: [
+      { Words: [{ WordText: 'RABASSIÈRE', Height: 40 }] }, { Words: [{ WordText: 'GRIGNAN-LES-ADHÉMAR', Height: 18 }] }] } }] } }));
+    await page.goto('./#/cave');
+    const pid = await page.evaluate(async () => (await (await import('/core/store.js')).creerStore('cave').put('produits', { profil: 'vin', nom: 'Rabassiere', millesime: 2024, style: 'rouge', appellation: 'Aop Grignan les Adhemar', pays: 'FR' })).id);
+    await page.goto('./#/scanner');
+    await page.locator('#photo-scan-galerie').setInputFiles(path.join(__dirname, '../icons/icone-192.png'));
+    await expect(page.locator('.champs-lus')).toContainText('Rabassière'); // capitales remises en casse de titre
+    await page.getByRole('button', { name: 'Mettre à jour' }).click();
+    const maj = page.locator('.carte-maj');
+    await expect(maj.getByRole('checkbox', { name: /Nom : Rabassière/ })).not.toBeChecked();
+    await expect(maj.getByRole('checkbox', { name: /Ajouter la photo/ })).toBeChecked();
+    await maj.getByRole('checkbox', { name: /Nom/ }).check();
+    await maj.getByRole('checkbox', { name: /Appellation : Grignan-les-Adhémar/ }).check();
+    await maj.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page).toHaveURL(new RegExp(`#/fiche/${pid}`));
+    await expect(page.locator('.fiche-photo img')).toBeVisible();
+    const p = await page.evaluate(async (x) => (await (await import('/core/store.js')).creerStore('cave').get('produits', x)), pid);
+    expect(p).toMatchObject({ nom: 'Rabassière', appellation: 'Grignan-les-Adhémar', millesime: 2024 });
+    expect(p.extra.texte_lu.recto).toContain('RABASSIÈRE');
   });
 });

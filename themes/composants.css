@@ -322,3 +322,10 @@ a.bouton { text-decoration: none; }
 .prerequis li.requis .marque { background: var(--c-declin); color: #FFFFFF; }
 .prerequis li.requis { color: var(--c-declin); }
 .lien-completer { display: inline-flex; align-items: center; min-height: 40px; color: var(--c-accent); font-weight: 600; }
+/* Scanner : mise à jour d'une fiche existante */
+.candidat { display: flex; flex-direction: column; gap: 6px; }
+.bouton.petit { min-height: 40px; padding: 0 10px; font-size: 13.5px; }
+.carte-maj { border: 1px solid var(--c-bord); border-radius: 16px; padding: 12px; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.carte-maj h3 { margin: 0; font-size: 16px; }
+.case-maj { display: flex; gap: 10px; align-items: flex-start; min-height: 40px; font-size: 14px; line-height: 1.35; }
+.case-maj input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--c-accent); }
