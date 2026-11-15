@@ -1,5 +1,5 @@
 // Connexion au casier Montrouge : abonnement à toutes les caractéristiques « notify » du service, flux décodé.
-import { creerDecodeur, lireTrame } from './protocole.js';
+import { creerDecodeur, lireTrame, presentsDe } from './protocole.js';
 
 const SERVICE = '569a1101-b87f-490c-92cb-11ba5ea5167c';
 const NOMS = ['CAVEASY', 'Caveasy', 'caveasy', 'CavEasy', 'Montrouge'];
@@ -11,7 +11,7 @@ export function creerCasier({ surRangee = () => {}, surStatut = () => {}, journa
     const t = lireTrame(f);
     if (!t.valide) { stats.invalides++; journal(`trame invalide ${f.map((b) => b.toString(16).padStart(2, '0')).join(' ')}`); return; }
     stats.valides++;
-    if (t.type === 0x45 && t.donnees.length >= 1) surRangee(t.adresse, t.donnees[0]);
+    if (t.type === 0x45 && t.donnees.length >= 1) surRangee(t.adresse, presentsDe(t));
   });
 
   return {

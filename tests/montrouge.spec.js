@@ -115,9 +115,14 @@ test('S15-02 lecture détaillée des trames observées (capteurs, passerelle, mo
   const { detailTrame } = await proto();
   expect(detailTrame({ adresse: 4, type: 0x45, donnees: [0x10, 0x00, 0x10] })).toBe('rangée 4 : posé E5, retiré —, présents E5');
   expect(detailTrame({ adresse: 5, type: 0x45, donnees: [0x00, 0x20, 0x00] })).toBe('rangée 5 : posé —, retiré E6, présents —');
+  // Casier réel : retrait de E3 alors que E5 reste en place → posés 00, retirés 04, présents 10
+  expect(detailTrame({ adresse: 4, type: 0x45, donnees: [0x00, 0x04, 0x10] })).toBe('rangée 4 : posé —, retiré E3, présents E5');
+  const { presentsDe, lireTrame, encoderRangee } = await proto();
+  expect(presentsDe({ donnees: [0x00, 0x04, 0x10] })).toBe(0x10);
+  expect(lireTrame(encoderRangee(4, 0x10, 0x00, 0x04).slice(1, -1)).donnees).toEqual([0x00, 0x04, 0x10]);
   const id = [0x12, 0x60, 0x8f, 0x51, 0x39, 0x36, 0x50, 0x51, 0x20, 0x20, 0x20, 0x30, 0x35, 0x0f, 0x12];
   const evt = detailTrame({ adresse: 0, type: 0x21, donnees: [...id, 0xff, 0x01, 0x97, 0x9a, 0xf1, 0x75, 0xde, 0x0a, 0x05, 0x20, 0x00, 0x20] });
-  expect(evt).toContain('passerelle Q96PQ   05 : événement n° 222, rangée 5, 20 00 20');
+  expect(evt).toContain('passerelle Q96PQ   05 : événement n° 222, rangée 5 : posé E6, retiré —, présents selon la passerelle E6');
   expect(evt).toContain('horloge 2026-11-02');
   expect(detailTrame({ adresse: 0, type: 0x21, donnees: [...id, 0xff, 0xff] })).toContain(': fin');
   expect(detailTrame({ adresse: 1, type: 0x40, donnees: [0x02, 0xea, 0x22, 0x01, 0x34, 0x54, 0x35, 0x51, 0x51, 0x20, 0x20, 0x20, 0x41, 0x2c, 0x3f, 0x11] })).toBe('module rangée 1 : « T5QQ   A » id ea 22 01 34');
