@@ -343,6 +343,7 @@ a.puce-mot { text-decoration: none; color: inherit; }
 .puce-mot .part { font-weight: 400; color: var(--c-texte-2); }
 /* Labo Bluetooth du casier */
 .labo-journal { max-height: 340px; overflow: auto; font: 11.5px/1.4 ui-monospace, monospace; padding-left: 0; list-style: none; word-break: break-all; }
+.labo-journal li { white-space: pre-wrap; }
 .labo-journal li.marque { color: var(--c-accent); font-weight: 600; }
 .labo-tableau table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .labo-tableau th, .labo-tableau td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--c-bord); }
