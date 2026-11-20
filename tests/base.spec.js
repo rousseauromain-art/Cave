@@ -174,7 +174,7 @@ test('S9-06 placard côté spiritueux : étagères par défaut (spiritueux seuls
   await expect(page.locator('.liste-simple')).toContainText('Whisky Test');
   await page.getByRole('button', { name: 'Étagères', exact: true }).click();
   await expect(page.locator('.bar')).toBeVisible();
-  await expect(page.getByText('+ 3 bouteilles de vin ici (voir la liste).')).toBeVisible();
+  await expect(page.getByText('+ 3 bouteilles de vin ici (voir la liste ou passez en Vins).')).toBeVisible();
 });
 
 test('S9-02 forme de la bouteille choisie dans la fiche (création et modification)', async ({ page }) => {

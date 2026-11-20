@@ -25,10 +25,12 @@ export const FORMES = {
   carafe: { titre: 'Carafe', contour: 'M19 18h10v18c0 4 16 10 16 30v38a12 12 0 0 1-12 12H15A12 12 0 0 1 3 104V66c0-20 16-26 16-30z', corps: [3, 52, 42, 64], haut: 18 },
   flasque: { titre: 'Flasque', contour: 'M21 4h6v34c0 4 7 8 7 16v54a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8V54c0-8 7-12 7-16z', corps: [14, 52, 20, 64], haut: 4 },
   // Vins
-  bordelaise: { titre: 'Bordeaux', profil: 'vin', contour: 'M20 2h8v26c0 4 10 6 10 12v70a6 6 0 0 1-6 6H16a6 6 0 0 1-6-6V40c0-6 10-8 10-12z', corps: [10, 40, 28, 76], haut: 2 },
-  bourguignonne: { titre: 'Bourgogne', profil: 'vin', contour: 'M20 2h8v20c0 10 12 16 12 28v60a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6V50c0-12 12-18 12-28z', corps: [8, 46, 32, 70], haut: 2 },
-  rhodanienne: { titre: 'Côtes du Rhône', profil: 'vin', contour: 'M20 2h8v24c0 8 11 14 11 24v60a6 6 0 0 1-6 6H15a6 6 0 0 1-6-6V50c0-10 11-16 11-24z', corps: [9, 46, 30, 70], haut: 2, ecusson: [24, 42] },
-  champenoise: { titre: 'Champagne', profil: 'vin', contour: 'M19 2h10v22c0 10 13 14 13 28v58a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6V52c0-14 13-18 13-28z', corps: [6, 50, 36, 66], haut: 2 }
+  // Vins : bouteilles de profil au trait (case 60 × 150, fond à y = 146), piqûre d'après les fiches Saverglass
+  // (Bordeaux 35–58 mm, Bourgogne ≈ 29 mm, Champagne ≈ 35 mm sur fond épais ; Rhône comme Bourgogne, écusson sur l'épaule).
+  bordelaise: { titre: 'Bordeaux', profil: 'vin', trait: true, contour: 'M25 6 h10 v42 c0 6 11 8 11 16 v78 a4 4 0 0 1 -4 4 h-24 a4 4 0 0 1 -4 -4 v-78 c0 -8 11 -10 11 -16 z', x: [14, 46], plein: 58, piqure: [13, 22], etiquette: [84, 112] },
+  bourguignonne: { titre: 'Bourgogne', profil: 'vin', trait: true, contour: 'M25 6 h10 v30 c0 18 13 26 13 44 v62 a4 4 0 0 1 -4 4 h-28 a4 4 0 0 1 -4 -4 v-62 c0 -18 13 -26 13 -44 z', x: [12, 48], plein: 50, piqure: [14, 14], etiquette: [92, 122] },
+  rhodanienne: { titre: 'Côtes du Rhône', profil: 'vin', trait: true, contour: 'M25 6 h10 v32 c0 16 12 24 12 42 v62 a4 4 0 0 1 -4 4 h-26 a4 4 0 0 1 -4 -4 v-62 c0 -18 12 -26 12 -42 z', x: [13, 47], plein: 52, piqure: [14, 15], etiquette: [92, 122], ecusson: true },
+  champenoise: { titre: 'Champagne', profil: 'vin', trait: true, contour: 'M24 4 h12 v36 c0 18 15 26 15 44 v58 a5 5 0 0 1 -5 5 h-32 a5 5 0 0 1 -5 -5 v-58 c0 -18 15 -26 15 -44 z', x: [9, 51], plein: 56, piqure: [16, 17], etiquette: [96, 122], muselet: true, fondEpais: true }
 };
 for (const f of Object.values(FORMES)) f.profil ??= 'spiritueux';
 
@@ -60,13 +62,40 @@ export function formeDe(p) {
 
 let compteur = 0;
 
+// Bouteille de vin au trait : contour, vin à sa couleur, piqûre, étiquette numérotée, capsule ou muselet, écusson.
+function bouteilleTrait(f, { produit, bouteille, trouve }) {
+  const svg = svgEl('svg', { viewBox: '-4 0 68 152', class: 'bar-svg trait', 'aria-hidden': 'true' });
+  const id = `bar-clip-${++compteur}`;
+  const base = 146, cx = 30, [x1, x2] = f.x, [pl, pp] = f.piqure, [e1, e2] = f.etiquette;
+  const arche = `M${cx - pl} ${base + 1} C${cx - pl * 0.6} ${base - pp} ${cx + pl * 0.6} ${base - pp} ${cx + pl} ${base + 1}`;
+  const clip = svgEl('clipPath', { id });
+  clip.append(svgEl('path', { d: f.contour }));
+  const dansBouteille = { 'clip-path': `url(#${id})` };
+  if (trouve) svg.append(svgEl('ellipse', { cx: 30, cy: 80, rx: 34, ry: 76, class: 'bar-halo' }));
+  svg.append(clip, svgEl('path', { d: f.contour, class: 'trait-fond' }));
+  if (bouteille) {
+    const niveau = bouteille.etat === 'ouverte' ? Math.max(0, Math.min(100, bouteille.niveau ?? 100)) : 100;
+    const haut = f.plein + (base - f.plein) * (1 - niveau / 100);
+    svg.append(svgEl('rect', { x: 0, y: haut, width: 60, height: base - haut + 4, fill: produit?.styleInfo?.pastille || '#7A1530', class: 'bar-liquide', ...dansBouteille }));
+  }
+  svg.append(svgEl('path', { d: `${arche} Z`, class: 'trait-fond', ...dansBouteille }), svgEl('path', { d: arche, class: 'trait', ...dansBouteille }));
+  if (f.fondEpais) svg.append(svgEl('path', { d: `M${cx - pl - 6} ${base - 1} C${cx - pl * 0.7} ${base - pp - 8} ${cx + pl * 0.7} ${base - pp - 8} ${cx + pl + 6} ${base - 1}`, class: 'trait fin', ...dansBouteille }));
+  svg.append(svgEl('rect', { x: x1, y: e1, width: x2 - x1, height: e2 - e1, class: 'trait-etiquette', ...dansBouteille }), svgEl('path', { d: `M${x1} ${e1} H${x2} M${x1} ${e2} H${x2}`, class: 'trait' }));
+  if (bouteille) svg.append(svgEl('text', { x: 30, y: (e1 + e2) / 2 + 5, 'text-anchor': 'middle', class: 'bar-numero trait-numero' }, String(bouteille.numero ?? '')));
+  if (f.muselet) svg.append(svgEl('path', { d: 'M22 10 h16 M22 16 h16 M24 30 h12', class: 'trait fin' }));
+  else svg.append(svgEl('rect', { x: 23.5, y: 10, width: 13, height: 7, rx: 1.5, class: 'trait-vide' }), svgEl('path', { d: 'M25 22 h10', class: 'trait' }));
+  if (f.ecusson) svg.append(svgEl('path', { d: 'M38 60 l5 2 v4 q0 5 -5 7 q-5 -2 -5 -7 v-4z', class: 'trait-vide fin' }));
+  svg.append(svgEl('path', { d: f.contour, class: 'trait-vide' }), svgEl('path', { d: `M${x1 + 6} 70 q-1 8 -1 16`, class: 'trait fin reflet' }));
+  return svg;
+}
+
 // Silhouette seule (formulaire) ou bouteille complète (liquide, bouchon, numéro, halo).
 export function silhouette(forme, { produit = null, bouteille = null, trouve = false, taille = null } = {}) {
   const f = FORMES[forme] || FORMES.haute;
+  if (f.trait) return bouteilleTrait(f, { produit, bouteille, trouve });
   const svg = svgEl('svg', { viewBox: '-6 -2 60 122', class: 'bar-svg', 'aria-hidden': 'true', ...(taille ? { width: taille * 0.5, height: taille } : {}) });
   if (!bouteille) {
     svg.append(svgEl('path', { d: f.contour, class: 'bar-forme' }));
-    if (f.ecusson) svg.append(svgEl('circle', { cx: f.ecusson[0], cy: f.ecusson[1], r: 3.5, class: 'bar-ecusson' }));
     return svg;
   }
   const id = `bar-clip-${++compteur}`;
@@ -85,7 +114,6 @@ export function silhouette(forme, { produit = null, bouteille = null, trouve = f
     svgEl('rect', { x: 12, y: 78, width: 24, height: 18, rx: 3, class: 'bar-etiquette' }),
     svgEl('text', { x: 24, y: 91, 'text-anchor': 'middle', class: 'bar-numero' }, String(bouteille.numero ?? ''))
   );
-  if (f.ecusson) svg.append(svgEl('circle', { cx: f.ecusson[0], cy: f.ecusson[1], r: 3.5, class: 'bar-ecusson' }));
   return svg;
 }
 
