@@ -77,13 +77,20 @@ async function ecranListe(core, el) {
     form);
 }
 
-// Regroupements du bar : une étagère par pays, par catégorie ou par niveau.
+// Regroupements des étagères : spiritueux par pays, catégorie ou niveau ; vins par région, couleur ou apogée.
+const parNombre = (a, b) => b.places.length - a.places.length;
+const REGROUPEMENTS_VIN = {
+  region: { titre: 'Région', cle: (b, p) => (p?.region ? [sansAccents(p.region), p.region, p.pays ? drapeau(p.pays, 22) : null] : p?.pays ? [p.pays, DRAPEAUX[p.pays]?.nom || p.pays, drapeau(p.pays, 22)] : ['?', 'Région inconnue', null]), ordre: parNombre },
+  couleur: { titre: 'Couleur', cle: (b, p) => (p?.style ? [p.style, p.styleInfo?.titre || p.style, pastille(p.styleInfo)] : ['?', 'Couleur non précisée', null]), ordre: parNombre },
+  apogee: { titre: 'Apogée', cle: (b, p) => (p?.phase ? [{ declin: 'a', apogee: 'b', jeunesse: 'c' }[p.phase], { declin: 'À boire vite (déclin)', apogee: 'À leur apogée', jeunesse: 'À attendre (jeunesse)' }[p.phase], null] : ['?', 'Apogée inconnue', null]), ordre: () => 0 }
+};
+const sansAccents = (t) => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const REGROUPEMENTS = {
   pays: { titre: 'Pays', cle: (b, p) => (p?.pays ? [p.pays, DRAPEAUX[p.pays]?.nom || p.pays, drapeau(p.pays, 22)] : ['?', 'Origine inconnue', null]), ordre: (a, b) => b.places.length - a.places.length },
   categorie: { titre: 'Catégorie', cle: (b, p) => (p?.style ? [p.style, p.styleInfo?.titre || p.style, pastille(p.styleInfo)] : ['?', 'Non précisée', null]), ordre: (a, b) => b.places.length - a.places.length },
   niveau: { titre: 'Niveau', cle: (b) => (b.etat === 'ouverte' ? ['a', 'Entamées', null] : ['b', 'Pleines', null]), ordre: (a, b) => a.titre.localeCompare(b.titre) }
 };
-let triBar = 'pays';
+const triBar = { spiritueux: 'pays', vin: 'region' };
 const vuesChoisies = new Map();
 
 const normaliser = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -115,21 +122,24 @@ async function ecranDetail(core, el, { id }) {
       [['bar', 'Étagères'], ['liste', 'Liste']].map(([k, t]) => h('button', { type: 'button', class: 'puce-mot', 'aria-pressed': String(vue() === k), onclick: () => { vuesChoisies.set(r.id, k); dessiner(); } }, t)));
     if (vue() === 'bar') {
       const groupes = new Map();
-      // Le bar ne dessine que les spiritueux ; les vins d'un rangement mixte restent dans la liste.
-      const spiritueux = ici.filter((b) => produits.get(b.produit_id)?.profil === 'spiritueux');
-      const autres = ici.length - spiritueux.length;
-      for (const b of spiritueux) {
+      // Les étagères dessinent le profil affiché ; l'autre profil d'un rangement mixte reste dans la liste.
+      const profilVue = core.profilCourant();
+      const regroupements = profilVue === 'vin' ? REGROUPEMENTS_VIN : REGROUPEMENTS;
+      const tri = regroupements[triBar[profilVue]] ? triBar[profilVue] : Object.keys(regroupements)[0];
+      const dessinees = ici.filter((b) => produits.get(b.produit_id)?.profil === profilVue);
+      const autres = ici.length - dessinees.length;
+      for (const b of dessinees) {
         const p = produits.get(b.produit_id);
-        const [cle, titre, entete] = REGROUPEMENTS[triBar].cle(b, p);
+        const [cle, titre, entete] = regroupements[tri].cle(b, p);
         if (!groupes.has(cle)) groupes.set(cle, { titre, entete, places: [] });
         groupes.get(cle).places.push({ bouteille: b, produit: p, trouve: !!correspond(b) });
       }
-      const liste = [...groupes.entries()].sort(([ka, a], [kb, b]) => (ka === '?') - (kb === '?') || REGROUPEMENTS[triBar].ordre(a, b) || a.titre.localeCompare(b.titre))
+      const liste = [...groupes.entries()].sort(([ka, a], [kb, b]) => (ka === '?') - (kb === '?') || regroupements[tri].ordre(a, b) || (tri === 'apogee' ? ka.localeCompare(kb) : a.titre.localeCompare(b.titre)))
         .map(([, g]) => ({ ...g, resume: `${g.places.length} bouteille${g.places.length > 1 ? 's' : ''}`, places: g.places.sort((x, y) => (x.produit?.nom || '').localeCompare(y.produit?.nom || '')) }));
       remplacer(zone, bascule,
         h('div', { class: 'tri-bar', role: 'group', 'aria-label': 'Ranger par' }, h('span', { class: 'discret' }, 'Ranger par'),
-          Object.entries(REGROUPEMENTS).map(([k, t]) => h('button', { type: 'button', class: 'puce-mot', 'aria-pressed': String(k === triBar), onclick: () => { triBar = k; dessiner(); } }, t.titre))),
-        autres ? h('p', { class: 'discret' }, `+ ${autres} bouteille${autres > 1 ? 's' : ''} de vin ici (voir la liste).`) : null,
+          Object.entries(regroupements).map(([k, t]) => h('button', { type: 'button', class: 'puce-mot', 'aria-pressed': String(k === tri), onclick: () => { triBar[profilVue] = k; dessiner(); } }, t.titre))),
+        autres ? h('p', { class: 'discret' }, `+ ${autres} bouteille${autres > 1 ? 's' : ''} de ${profilVue === 'vin' ? 'spiritueux' : 'vin'} ici (voir la liste ou passez en ${profilVue === 'vin' ? 'Spiritueux' : 'Vins'}).`) : null,
         h('div', { class: 'carte bar-carte' }, liste.length ? dessinerBar(liste, { surChoix: (pl) => { choisi = pl.bouteille.numero; recherche = ''; champ.value = ''; dessiner(); } }) : h('p', { class: 'discret' }, 'Aucune bouteille ici : rangez-en depuis leur fiche ou ci-dessous.')));
     } else if (aGrille(r)) {
       const parEmplacement = new Map(ici.map((b) => [b.emplacement, b]));

@@ -34,10 +34,10 @@ export function grilleDe(r) {
 }
 
 // Vue du détail : 'casier' (grille de culs de bouteille), 'bar' (illustration en étagères) ou 'liste'.
-// Un rangement sans grille (placard, étagère, carton…) s'affiche en bar côté spiritueux.
+// Un rangement sans grille (placard, étagère, carton…) s'affiche en étagères illustrées (vins comme spiritueux).
 export function vueDe(r, profil = null) {
   if (grilleDe(r)) return 'casier';
-  return TYPES[r?.type]?.vue || (profil === 'spiritueux' ? 'bar' : 'liste');
+  return TYPES[r?.type]?.vue || 'bar';
 }
 
 // Emplacement affiché seulement pour les rangements à grille (« R3-E2 »).
