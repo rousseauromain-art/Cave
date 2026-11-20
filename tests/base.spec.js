@@ -174,7 +174,7 @@ test('S9-06 placard côté spiritueux : étagères par défaut (spiritueux seuls
   await expect(page.locator('.liste-simple')).toContainText('Whisky Test');
   await page.getByRole('button', { name: 'Étagères', exact: true }).click();
   await expect(page.locator('.bar')).toBeVisible();
-  await expect(page.getByText('+ 3 bouteilles de vin ici (voir la liste).')).toBeVisible();
+  await expect(page.getByText('+ 3 bouteilles de vin ici (voir la liste ou passez en Vins).')).toBeVisible();
 });
 
 test('S9-02 forme de la bouteille choisie dans la fiche (création et modification)', async ({ page }) => {
@@ -276,4 +276,26 @@ test('S14-02 cépages en mots-clés : puces sur la fiche, filtre de la cave, sai
   await expect(page.locator('.cepages-cave .puce-mot[aria-pressed="true"]')).toHaveCount(0);
   await page.getByPlaceholder(/cépage/).fill('syrah');
   await expect(page.locator('.matrice [role="listitem"]')).toHaveCount(1);
+});
+
+test('S16-01 étagères des vins : forme selon la région, regroupement par région, couleur, apogée', async ({ page }) => {
+  const formes = await page.evaluate(async () => {
+    const { formeDe } = await import('/core/ui/etagere.js');
+    return [
+      formeDe({ profil: 'vin', region: 'Bordeaux' }), formeDe({ profil: 'vin', appellation: 'Pommard' }),
+      formeDe({ profil: 'vin', appellation: 'Grignan-les-Adhémar', apogee: { source: "Table d'apogée Caveasy : France > Rhône > Grignan-les-Adhémar" } }),
+      formeDe({ profil: 'vin', style: 'champagne' }), formeDe({ profil: 'vin', appellation: 'Crémant de Loire' }),
+      formeDe({ profil: 'vin', region: 'Alsace' }), formeDe({ profil: 'vin', region: 'Bourgogne', extra: { forme: 'champenoise' } }), formeDe({ profil: 'vin', extra: { forme: 'haute' } })
+    ];
+  });
+  expect(formes).toEqual(['bordelaise', 'bourguignonne', 'rhodanienne', 'champenoise', 'champenoise', 'bordelaise', 'champenoise', 'bordelaise']);
+  await page.goto(`./#/rangement/${await id(page, 'etagere')}`);
+  await expect(page.locator('.bar .bar-place:not(.vide)')).not.toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Région', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Couleur', exact: true }).click();
+  await expect(page.locator('.bar-entete strong').first()).not.toBeEmpty();
+  await page.getByRole('button', { name: 'Apogée', exact: true }).click();
+  await expect(page.locator('.bar-groupe')).not.toHaveCount(0);
+  await page.goto(`./#/produit/${await id(page, 'vin')}/modifier`);
+  await expect(page.locator('.formes button')).toHaveText(['Bordeaux', 'Bourgogne', 'Côtes du Rhône', 'Champagne']);
 });

@@ -5,7 +5,7 @@ import { DRAPEAUX } from '../../data/drapeaux.js';
 import { ajouterBouteilles, aGrille, emplacementsLibres } from '../../core/inventaire.js';
 import { compresser, urlPhoto, oublierPhoto } from '../../core/photos.js';
 import { prendreBrouillon, lireCepages, ecrireCepages } from '../../core/identification.js';
-import { FORMES, formeDe, silhouette } from '../../core/ui/etagere.js';
+import { formesPour, formeDe, silhouette } from '../../core/ui/etagere.js';
 
 function champ(h, libelle, controle, aide) {
   return h('label', { class: 'champ' }, h('span', { class: 'libelle' }, libelle), controle, aide ? h('span', { class: 'discret' }, aide) : null);
@@ -56,9 +56,9 @@ export async function ecranFormulaire(core, el, { id }) {
       COULEURS_PERSO.map((c, i) => h('label', { class: 'couleur-perso', style: { background: c } },
         h('input', { type: 'radio', name: 'style_couleur', value: c, checked: i === 0, 'aria-label': `Couleur ${i + 1}` })))));
   // Forme de la bouteille (dessin du bar) : choisie ici seulement, à la création ou en modification.
-  const forme = h('input', { type: 'hidden', name: 'forme', value: formeDe(p) });
-  const choixForme = vin ? null : h('div', { class: 'champ' }, h('span', { class: 'libelle' }, 'Forme de la bouteille (vue du bar)'),
-    h('div', { class: 'formes', role: 'group', 'aria-label': 'Forme de la bouteille' }, Object.entries(FORMES).map(([k, f]) => h('button', {
+  const forme = h('input', { type: 'hidden', name: 'forme', value: formeDe({ ...p, profil }) });
+  const choixForme = h('div', { class: 'champ' }, h('span', { class: 'libelle' }, 'Forme de la bouteille (vue en étagères)'),
+    h('div', { class: `formes${vin ? ' formes-vin' : ''}`, role: 'group', 'aria-label': 'Forme de la bouteille' }, formesPour(profil).map(([k, f]) => h('button', {
       type: 'button', 'aria-pressed': String(k === forme.value), 'data-forme': k,
       onclick: (e) => { forme.value = k; for (const b of e.currentTarget.parentNode.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); }
     }, silhouette(k), f.titre))), forme);
@@ -136,7 +136,7 @@ export async function ecranFormulaire(core, el, { id }) {
       fut: d.fut?.trim() || null, apogee_debut: nombre(d.apogee_debut), apogee_fin: nombre(d.apogee_fin),
       note: d.note === '' ? null : Math.max(0, Math.min(5, Number(d.note))), commentaire: d.commentaire?.trim() || null,
       photo_path: nouvellePhoto ? null : p.photo_path ?? null,
-      extra: { ...(vin ? p.extra ?? {} : { ...(p.extra || {}), volume_cl: Number(d.volume_cl) || 70, forme: d.forme || null }), style_perso: style.perso }
+      extra: { ...(vin ? { ...(p.extra || {}), forme: d.forme || null } : { ...(p.extra || {}), volume_cl: Number(d.volume_cl) || 70, forme: d.forme || null }), style_perso: style.perso }
     });
     if (nouvellePhoto) {
       await core.store.enregistrerPhoto(produit.id, nouvellePhoto);

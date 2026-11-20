@@ -356,3 +356,14 @@ a.puce-mot { text-decoration: none; color: inherit; }
 .liste-tests li { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .avertissement { background: var(--c-surface); border-left: 4px solid var(--c-declin); padding: 8px 10px; font-size: 13.5px; border-radius: 6px; }
 .labo-caracs .liste-simple { font-size: 11.5px; word-break: break-all; }
+.formes.formes-vin { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bar-svg.trait { height: 112px; }
+.bar-svg .trait { fill: none; stroke: var(--c-texte); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.bar-svg .trait.fin { stroke-width: 1.7; }
+.bar-svg .trait.reflet { opacity: .6; }
+.bar-svg .trait-vide { fill: none; stroke: var(--c-texte); stroke-width: 2.6; stroke-linejoin: round; }
+.bar-svg .trait-vide.fin { stroke-width: 1.7; }
+.bar-svg .trait-fond { fill: var(--c-surface); }
+.bar-svg .trait-etiquette { fill: var(--c-surface); fill-opacity: .92; }
+.bar-svg .trait-numero { font-size: 14px; }
+.formes button .bar-svg.trait { height: 44px; }
